@@ -1,0 +1,175 @@
+{
+  "name": "VideoPlayer Mobile",
+  "short_name": "VideoPlayer",
+  "description": "Tema WordPress optimizado para videos en dispositivos móviles con funciones de monetización avanzadas",
+  "lang": "es",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#ff6b6b",
+  "background_color": "#0c0c0c",
+  "categories": ["entertainment", "video", "multimedia"],
+  "screenshots": [
+    {
+      "src": "/wp-content/themes/videoplayer-mobile/images/screenshot-1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Página principal del reproductor de videos"
+    },
+    {
+      "src": "/wp-content/themes/videoplayer-mobile/images/screenshot-2.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Vista móvil del reproductor"
+    }
+  ],
+  "icons": [
+    {
+      "src": "/wp-content/themes/videoplayer-mobile/images/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/wp-content/themes/videoplayer-mobile/images/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/wp-content/themes/videoplayer-mobile/images/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/wp-content/themes/videoplayer-mobile/images/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/wp-content/themes/videoplayer-mobile/images/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/wp-content/themes/videoplayer-mobile/images/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/wp-content/themes/videoplayer-mobile/images/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/wp-content/themes/videoplayer-mobile/images/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/wp-content/themes/videoplayer-mobile/images/icon-maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/wp-content/themes/videoplayer-mobile/images/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Ver Videos",
+      "short_name": "Videos",
+      "description": "Ver todos los videos disponibles",
+      "url": "/videos/",
+      "icons": [
+        {
+          "src": "/wp-content/themes/videoplayer-mobile/images/shortcut-videos.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Buscar",
+      "short_name": "Buscar",
+      "description": "Buscar videos",
+      "url": "/?s=",
+      "icons": [
+        {
+          "src": "/wp-content/themes/videoplayer-mobile/images/shortcut-search.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Populares",
+      "short_name": "Populares",
+      "description": "Videos más populares",
+      "url": "/videos/?orderby=popular",
+      "icons": [
+        {
+          "src": "/wp-content/themes/videoplayer-mobile/images/shortcut-popular.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "/manifest.json"
+    }
+  ],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+videoplayer",
+      "url": "/video/?url=%s"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/video/upload",
+      "accept": {
+        "video/mp4": [".mp4"],
+        "video/webm": [".webm"],
+        "video/ogg": [".ogv"]
+      }
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "video",
+          "accept": ["video/mp4", "video/webm", "video/ogg"]
+        }
+      ]
+    }
+  }
+}
