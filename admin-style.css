@@ -1,0 +1,393 @@
+/* VideoPlayer Mobile Admin Styles */
+
+/* Post Type Icon */
+#menu-posts-video .wp-menu-image:before {
+    content: '\f235';
+    color: #ff6b6b;
+}
+
+/* Meta Box Styles */
+.video-meta-box {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.video-meta-box h4 {
+    margin-top: 0;
+    color: #ff6b6b;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+}
+
+.form-table th {
+    width: 200px;
+    font-weight: 600;
+}
+
+.form-table .large-text {
+    width: 100%;
+}
+
+/* Video Stats */
+.video-stats {
+    display: flex;
+    gap: 20px;
+    margin: 15px 0;
+    padding: 15px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.video-stats .stat-item {
+    text-align: center;
+    flex: 1;
+}
+
+.video-stats .stat-number {
+    display: block;
+    font-size: 24px;
+    font-weight: bold;
+    color: #ff6b6b;
+}
+
+.video-stats .stat-label {
+    font-size: 12px;
+    color: #666;
+    text-transform: uppercase;
+}
+
+/* Admin Columns */
+.column-video_thumbnail {
+    width: 80px;
+}
+
+.column-video_duration {
+    width: 100px;
+}
+
+.column-video_views {
+    width: 120px;
+}
+
+.column-featured_video {
+    width: 100px;
+}
+
+/* Featured Video Badge in Admin */
+.featured-video-admin {
+    color: #ff6b6b;
+    font-weight: bold;
+}
+
+/* Post Edit Screen */
+.post-type-video .postbox {
+    border: 1px solid #ddd;
+}
+
+.post-type-video .postbox h2 {
+    color: #ff6b6b;
+    border-bottom: 1px solid #eee;
+}
+
+/* Video Preview in Admin */
+.video-preview {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+/* Admin Notices for Video Theme */
+.notice-videoplayer {
+    border-left-color: #ff6b6b;
+}
+
+.notice-videoplayer .notice-title {
+    color: #ff6b6b;
+    font-weight: 600;
+}
+
+/* Customizer Preview Styles */
+.customize-control-videoplayer {
+    margin-bottom: 15px;
+}
+
+.customize-control-videoplayer .customize-control-title {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.customize-control-videoplayer .customize-control-description {
+    font-style: italic;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+/* Video Upload Button */
+.video-upload-button {
+    background: #ff6b6b;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.video-upload-button:hover {
+    background: #e85555;
+    color: white;
+}
+
+/* Admin Dashboard Widget */
+.videoplayer-dashboard-widget {
+    background: linear-gradient(135deg, #ff6b6b, #4ecdc4);
+    color: white;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.videoplayer-dashboard-widget h3 {
+    color: white;
+    margin-top: 0;
+}
+
+/* Quick Edit Styles */
+.inline-edit-video .inline-edit-col-right {
+    width: 50%;
+}
+
+.inline-edit-video label.video-duration,
+.inline-edit-video label.video-views {
+    display: block;
+    margin: 5px 0;
+}
+
+/* Media Library Video Filter */
+.media-frame.mode-select .media-frame-router .media-menu-item.video-filter {
+    color: #ff6b6b;
+}
+
+/* Responsive Admin Styles */
+@media screen and (max-width: 782px) {
+    .video-stats {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .form-table th,
+    .form-table td {
+        display: block;
+        width: 100%;
+    }
+    
+    .form-table th {
+        padding-bottom: 5px;
+    }
+}
+
+/* Theme Options Page */
+.videoplayer-options {
+    max-width: 1000px;
+}
+
+.videoplayer-options .nav-tab {
+    background: #f1f1f1;
+    border-color: #ccc;
+}
+
+.videoplayer-options .nav-tab-active {
+    background: #fff;
+    border-bottom-color: #fff;
+    color: #ff6b6b;
+}
+
+.videoplayer-options .form-table th {
+    width: 220px;
+    padding: 20px 10px 20px 0;
+}
+
+.videoplayer-options .form-table td {
+    padding: 15px 10px;
+}
+
+.videoplayer-options .description {
+    font-style: italic;
+    color: #666;
+    margin-top: 5px;
+}
+
+/* Color Picker Override */
+.videoplayer-color-picker .wp-picker-container {
+    display: inline-block;
+}
+
+.videoplayer-color-picker .wp-color-result {
+    border-radius: 4px;
+}
+
+/* Help Tabs */
+.videoplayer-help h3 {
+    color: #ff6b6b;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+}
+
+.videoplayer-help ul {
+    list-style-type: disc;
+    margin-left: 20px;
+}
+
+.videoplayer-help .feature-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.videoplayer-help .feature-item {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 4px;
+    border-left: 4px solid #ff6b6b;
+}
+
+/* Plugin Compatibility */
+.videoplayer-compatibility-notice {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.videoplayer-compatibility-notice .notice-title {
+    color: #856404;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+/* Loading States */
+.videoplayer-loading {
+    position: relative;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.videoplayer-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #ff6b6b;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: videoplayer-spin 1s linear infinite;
+}
+
+@keyframes videoplayer-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Success/Error States */
+.videoplayer-success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+.videoplayer-error {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+/* Video Import/Export */
+.videoplayer-import-export {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.videoplayer-import-export h3 {
+    margin-top: 0;
+    color: #ff6b6b;
+}
+
+.videoplayer-import-export .button-primary {
+    background: #ff6b6b;
+    border-color: #ff6b6b;
+}
+
+.videoplayer-import-export .button-primary:hover {
+    background: #e85555;
+    border-color: #e85555;
+}
+
+/* Bulk Actions */
+.videoplayer-bulk-actions {
+    display: flex;
+    gap: 10px;
+    margin: 10px 0;
+    align-items: center;
+}
+
+.videoplayer-bulk-actions select {
+    min-width: 150px;
+}
+
+/* Advanced Settings */
+.videoplayer-advanced-settings {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin: 20px 0;
+}
+
+.videoplayer-advanced-settings h3 {
+    background: #f1f1f1;
+    margin: 0;
+    padding: 15px 20px;
+    border-bottom: 1px solid #ddd;
+    color: #ff6b6b;
+}
+
+.videoplayer-advanced-settings .inside {
+    padding: 20px;
+}
+
+/* Theme Branding */
+.videoplayer-branding {
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #ff6b6b, #4ecdc4);
+    color: white;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.videoplayer-branding h2 {
+    color: white;
+    margin-bottom: 10px;
+}
+
+.videoplayer-branding p {
+    margin-bottom: 0;
+    opacity: 0.9;
+}

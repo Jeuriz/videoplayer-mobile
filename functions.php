@@ -161,72 +161,9 @@ require_once VIDEOPLAYER_THEME_DIR . '/inc/customizer.php';
 require_once VIDEOPLAYER_THEME_DIR . '/inc/widgets.php';
 require_once VIDEOPLAYER_THEME_DIR . '/inc/theme-setup.php';
 
-/**
- * Video custom post type
- */
-function videoplayer_register_video_post_type() {
-    $labels = array(
-        'name' => __('Videos', 'videoplayer'),
-        'singular_name' => __('Video', 'videoplayer'),
-        'menu_name' => __('Videos', 'videoplayer'),
-        'add_new' => __('Agregar Nuevo', 'videoplayer'),
-        'add_new_item' => __('Agregar Nuevo Video', 'videoplayer'),
-        'edit_item' => __('Editar Video', 'videoplayer'),
-        'new_item' => __('Nuevo Video', 'videoplayer'),
-        'view_item' => __('Ver Video', 'videoplayer'),
-        'search_items' => __('Buscar Videos', 'videoplayer'),
-        'not_found' => __('No se encontraron videos', 'videoplayer'),
-        'not_found_in_trash' => __('No se encontraron videos en la papelera', 'videoplayer'),
-    );
+// Video post type is registered in inc/post-types.php
 
-    $args = array(
-        'labels' => $labels,
-        'public' => true,
-        'has_archive' => true,
-        'rewrite' => array('slug' => 'videos'),
-        'supports' => array('title', 'editor', 'excerpt', 'thumbnail', 'comments', 'custom-fields'),
-        'menu_icon' => 'dashicons-video-alt3',
-        'show_in_rest' => true,
-        'taxonomies' => array('category', 'post_tag'),
-    );
-
-    register_post_type('video', $args);
-}
-add_action('init', 'videoplayer_register_video_post_type');
-
-/**
- * Video helper functions
- */
-function get_video_duration($post_id = null) {
-    if (!$post_id) {
-        $post_id = get_the_ID();
-    }
-    
-    $duration = get_post_meta($post_id, '_video_duration', true);
-    return $duration ? $duration : '0:00';
-}
-
-function get_video_views($post_id = null) {
-    if (!$post_id) {
-        $post_id = get_the_ID();
-    }
-    
-    $views = get_post_meta($post_id, '_view_count', true);
-    return $views ? intval($views) : 0;
-}
-
-function update_video_views($post_id) {
-    $views = get_video_views($post_id);
-    update_post_meta($post_id, '_view_count', $views + 1);
-}
-
-function is_redirect_enabled($post_id = null) {
-    if (!$post_id) {
-        $post_id = get_the_ID();
-    }
-    
-    return get_post_meta($post_id, '_redirect_enabled', true) == '1';
-}
+// Video helper functions are in inc/video-functions.php
 
 /**
  * Track video views on single video pages
@@ -246,77 +183,7 @@ function videoplayer_track_video_view() {
 }
 add_action('wp_head', 'videoplayer_track_video_view');
 
-/**
- * Add video meta boxes
- */
-function videoplayer_add_video_meta_boxes() {
-    add_meta_box(
-        'video-details',
-        __('Detalles del Video', 'videoplayer'),
-        'videoplayer_video_meta_box_callback',
-        'video',
-        'normal',
-        'high'
-    );
-}
-add_action('add_meta_boxes', 'videoplayer_add_video_meta_boxes');
-
-function videoplayer_video_meta_box_callback($post) {
-    wp_nonce_field('videoplayer_save_video_meta', 'videoplayer_video_meta_nonce');
-    
-    $duration = get_post_meta($post->ID, '_video_duration', true);
-    $video_url = get_post_meta($post->ID, '_video_url', true);
-    $redirect_enabled = get_post_meta($post->ID, '_redirect_enabled', true);
-    $featured_video = get_post_meta($post->ID, '_featured_video', true);
-    
-    echo '<table class="form-table">';
-    echo '<tr>';
-    echo '<th><label for="video_duration">' . __('Duración del Video', 'videoplayer') . '</label></th>';
-    echo '<td><input type="text" id="video_duration" name="video_duration" value="' . esc_attr($duration) . '" placeholder="5:30" /></td>';
-    echo '</tr>';
-    
-    echo '<tr>';
-    echo '<th><label for="video_url">' . __('URL del Video', 'videoplayer') . '</label></th>';
-    echo '<td><input type="url" id="video_url" name="video_url" value="' . esc_attr($video_url) . '" class="large-text" /></td>';
-    echo '</tr>';
-    
-    echo '<tr>';
-    echo '<th><label for="redirect_enabled">' . __('Habilitar Redirección', 'videoplayer') . '</label></th>';
-    echo '<td><input type="checkbox" id="redirect_enabled" name="redirect_enabled" value="1" ' . checked($redirect_enabled, '1', false) . ' /></td>';
-    echo '</tr>';
-    
-    echo '<tr>';
-    echo '<th><label for="featured_video">' . __('Video Destacado', 'videoplayer') . '</label></th>';
-    echo '<td><input type="checkbox" id="featured_video" name="featured_video" value="1" ' . checked($featured_video, '1', false) . ' /></td>';
-    echo '</tr>';
-    echo '</table>';
-}
-
-function videoplayer_save_video_meta($post_id) {
-    if (!isset($_POST['videoplayer_video_meta_nonce']) || 
-        !wp_verify_nonce($_POST['videoplayer_video_meta_nonce'], 'videoplayer_save_video_meta')) {
-        return;
-    }
-
-    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
-        return;
-    }
-
-    if (!current_user_can('edit_post', $post_id)) {
-        return;
-    }
-
-    $fields = array('video_duration', 'video_url', 'redirect_enabled', 'featured_video');
-    
-    foreach ($fields as $field) {
-        if (isset($_POST[$field])) {
-            update_post_meta($post_id, '_' . $field, sanitize_text_field($_POST[$field]));
-        } else {
-            delete_post_meta($post_id, '_' . $field);
-        }
-    }
-}
-add_action('save_post', 'videoplayer_save_video_meta');
+// Video meta boxes are handled in inc/post-types.php
 
 /**
  * Custom excerpt length
@@ -402,44 +269,7 @@ function videoplayer_add_manifest() {
 }
 add_action('wp_head', 'videoplayer_add_manifest');
 
-/**
- * AJAX handlers
- */
-function videoplayer_ajax_load_more_videos() {
-    check_ajax_referer('videoplayer_nonce', 'nonce');
-    
-    $page = intval($_POST['page']);
-    $posts_per_page = intval($_POST['posts_per_page']);
-    
-    $args = array(
-        'post_type' => 'video',
-        'posts_per_page' => $posts_per_page,
-        'paged' => $page,
-        'post_status' => 'publish'
-    );
-    
-    $videos = new WP_Query($args);
-    
-    if ($videos->have_posts()) {
-        ob_start();
-        while ($videos->have_posts()) {
-            $videos->the_post();
-            get_template_part('template-parts/video-card');
-        }
-        $html = ob_get_clean();
-        wp_reset_postdata();
-        
-        wp_send_json_success(array(
-            'html' => $html,
-            'found_posts' => $videos->found_posts,
-            'max_pages' => $videos->max_num_pages
-        ));
-    } else {
-        wp_send_json_error('No more videos found');
-    }
-}
-add_action('wp_ajax_load_more_videos', 'videoplayer_ajax_load_more_videos');
-add_action('wp_ajax_nopriv_load_more_videos', 'videoplayer_ajax_load_more_videos');
+// AJAX handlers are in inc/video-functions.php
 
 /**
  * Contact form handler

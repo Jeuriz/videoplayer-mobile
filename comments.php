@@ -1,9 +1,14 @@
 <?php
 /**
- * Comments template
+ * Comments Template
  * 
  * @package VideoPlayerMobile
  */
+
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
 
 /*
  * If the current post is protected by a password and
@@ -15,44 +20,68 @@ if (post_password_required()) {
 }
 ?>
 
-<div id="comments" class="comments-area">
+<section id="comments" class="comments-area">
     
     <?php if (have_comments()) : ?>
-        <h3 class="comments-title">
-            <?php
-            $comment_count = get_comments_number();
-            if ($comment_count == 1) {
-                printf(
-                    esc_html__('Un comentario en "%s"', 'videoplayer'),
-                    '<span>' . get_the_title() . '</span>'
-                );
-            } else {
-                printf(
-                    esc_html(_nx('%1$s comentario en "%2$s"', '%1$s comentarios en "%2$s"', $comment_count, 'comments title', 'videoplayer')),
-                    number_format_i18n($comment_count),
-                    '<span>' . get_the_title() . '</span>'
-                );
-            }
-            ?>
-        </h3>
+        
+        <div class="comments-header">
+            <h3 class="comments-title">
+                <?php
+                $comment_count = get_comments_number();
+                if ($comment_count === 1) {
+                    printf(
+                        esc_html__('Un comentario en &ldquo;%1$s&rdquo;', 'videoplayer'),
+                        '<span>' . wp_kses_post(get_the_title()) . '</span>'
+                    );
+                } else {
+                    printf(
+                        esc_html(_nx(
+                            '%1$s comentario en &ldquo;%2$s&rdquo;',
+                            '%1$s comentarios en &ldquo;%2$s&rdquo;',
+                            $comment_count,
+                            'comments title',
+                            'videoplayer'
+                        )),
+                        number_format_i18n($comment_count),
+                        '<span>' . wp_kses_post(get_the_title()) . '</span>'
+                    );
+                }
+                ?>
+            </h3>
+            
+            <div class="comments-stats">
+                <span class="comments-count">💬 <?php echo get_comments_number(); ?> comentarios</span>
+                <?php if (get_option('thread_comments')) : ?>
+                    <span class="comments-threading">🧵 Conversación anidada</span>
+                <?php endif; ?>
+            </div>
+        </div>
 
-        <!-- Comments Navigation (Top) -->
-        <?php if (get_comment_pages_count() > 1 && get_option('page_comments')) : ?>
-            <nav id="comment-nav-above" class="navigation comment-navigation" role="navigation">
-                <h4 class="sr-only"><?php esc_html_e('Navegación de comentarios', 'videoplayer'); ?></h4>
-                <div class="nav-links">
-                    <div class="nav-previous">
-                        <?php previous_comments_link(esc_html__('&larr; Comentarios más antiguos', 'videoplayer')); ?>
-                    </div>
-                    <div class="nav-next">
-                        <?php next_comments_link(esc_html__('Comentarios más nuevos &rarr;', 'videoplayer')); ?>
-                    </div>
+        <!-- Comments Sort Options -->
+        <div class="comments-controls">
+            <div class="comments-sort">
+                <label for="comment-sort"><?php esc_html_e('Ordenar por:', 'videoplayer'); ?></label>
+                <select id="comment-sort" onchange="sortComments(this.value)">
+                    <option value="newest"><?php esc_html_e('Más recientes', 'videoplayer'); ?></option>
+                    <option value="oldest"><?php esc_html_e('Más antiguos', 'videoplayer'); ?></option>
+                    <option value="popular"><?php esc_html_e('Más populares', 'videoplayer'); ?></option>
+                </select>
+            </div>
+            
+            <?php if (get_option('thread_comments')) : ?>
+                <div class="comments-view-toggle">
+                    <button class="view-toggle active" data-view="threaded" onclick="toggleCommentsView('threaded')">
+                        <?php esc_html_e('Vista anidada', 'videoplayer'); ?>
+                    </button>
+                    <button class="view-toggle" data-view="flat" onclick="toggleCommentsView('flat')">
+                        <?php esc_html_e('Vista plana', 'videoplayer'); ?>
+                    </button>
                 </div>
-            </nav>
-        <?php endif; ?>
+            <?php endif; ?>
+        </div>
 
         <!-- Comments List -->
-        <ol class="comment-list">
+        <ol class="comments-list" id="comments-list">
             <?php
             wp_list_comments(array(
                 'style'       => 'ol',
@@ -63,207 +92,387 @@ if (post_password_required()) {
             ?>
         </ol>
 
-        <!-- Comments Navigation (Bottom) -->
-        <?php if (get_comment_pages_count() > 1 && get_option('page_comments')) : ?>
-            <nav id="comment-nav-below" class="navigation comment-navigation" role="navigation">
-                <h4 class="sr-only"><?php esc_html_e('Navegación de comentarios', 'videoplayer'); ?></h4>
+        <!-- Comments Pagination -->
+        <?php
+        $prev_link = get_previous_comments_link(__('← Comentarios anteriores', 'videoplayer'));
+        $next_link = get_next_comments_link(__('Comentarios siguientes →', 'videoplayer'));
+        
+        if ($prev_link || $next_link) :
+        ?>
+            <nav class="comments-pagination" role="navigation" aria-label="<?php esc_attr_e('Navegación de comentarios', 'videoplayer'); ?>">
                 <div class="nav-links">
-                    <div class="nav-previous">
-                        <?php previous_comments_link(esc_html__('&larr; Comentarios más antiguos', 'videoplayer')); ?>
-                    </div>
-                    <div class="nav-next">
-                        <?php next_comments_link(esc_html__('Comentarios más nuevos &rarr;', 'videoplayer')); ?>
-                    </div>
+                    <?php if ($prev_link) : ?>
+                        <div class="nav-previous"><?php echo $prev_link; ?></div>
+                    <?php endif; ?>
+                    
+                    <?php if ($next_link) : ?>
+                        <div class="nav-next"><?php echo $next_link; ?></div>
+                    <?php endif; ?>
                 </div>
             </nav>
         <?php endif; ?>
 
     <?php endif; // Check for have_comments(). ?>
 
-    <?php
-    // If comments are closed and there are comments, let's leave a little note.
-    if (!comments_open() && get_comments_number() && post_type_supports(get_post_type(), 'comments')) :
-    ?>
-        <p class="no-comments"><?php esc_html_e('Los comentarios están cerrados.', 'videoplayer'); ?></p>
+    <!-- Comment Form Section -->
+    <?php if (comments_open()) : ?>
+        
+        <div class="comment-form-section">
+            <div class="comment-form-header">
+                <h3 class="comment-form-title">
+                    <?php esc_html_e('Deja tu comentario', 'videoplayer'); ?>
+                </h3>
+                <p class="comment-form-description">
+                    <?php esc_html_e('Comparte tu opinión sobre este contenido. Mantén el respeto y la cortesía.', 'videoplayer'); ?>
+                </p>
+            </div>
+
+            <?php
+            $commenter = wp_get_current_commenter();
+            $req = get_option('require_name_email');
+            $aria_req = ($req ? ' aria-required="true" required' : '');
+            
+            $comment_form_args = array(
+                'title_reply'         => '',
+                'title_reply_to'      => esc_html__('Responder a %s', 'videoplayer'),
+                'title_reply_before'  => '<h3 id="reply-title" class="comment-reply-title">',
+                'title_reply_after'   => '</h3>',
+                'cancel_reply_before' => '<small>',
+                'cancel_reply_after'  => '</small>',
+                'cancel_reply_link'   => esc_html__('Cancelar respuesta', 'videoplayer'),
+                'label_submit'        => esc_html__('Publicar comentario', 'videoplayer'),
+                'submit_button'       => '<input name="%1$s" type="submit" id="%2$s" class="%3$s" value="%4$s">',
+                'submit_field'        => '<div class="form-submit">%1$s %2$s</div>',
+                'comment_field'       => '<div class="comment-form-comment"><label for="comment" class="comment-form-label">' . esc_html__('Comentario', 'videoplayer') . ' <span class="required">*</span></label><textarea id="comment" name="comment" cols="45" rows="6" maxlength="65525" placeholder="' . esc_attr__('Escribe tu comentario aquí...', 'videoplayer') . '"' . $aria_req . '></textarea><div class="comment-guidelines"><small>' . esc_html__('Los comentarios están moderados. Mantén el respeto y evita contenido inapropiado.', 'videoplayer') . '</small></div></div>',
+                'fields'              => array(
+                    'author' => '<div class="comment-form-author"><label for="author" class="comment-form-label">' . esc_html__('Nombre', 'videoplayer') . ($req ? ' <span class="required">*</span>' : '') . '</label><input id="author" name="author" type="text" value="' . esc_attr($commenter['comment_author']) . '" size="30" maxlength="245" placeholder="' . esc_attr__('Tu nombre', 'videoplayer') . '"' . $aria_req . ' /></div>',
+                    'email'  => '<div class="comment-form-email"><label for="email" class="comment-form-label">' . esc_html__('Email', 'videoplayer') . ($req ? ' <span class="required">*</span>' : '') . '</label><input id="email" name="email" type="email" value="' . esc_attr($commenter['comment_author_email']) . '" size="30" maxlength="100" aria-describedby="email-notes" placeholder="' . esc_attr__('tu@email.com', 'videoplayer') . '"' . $aria_req . ' /><small id="email-notes">' . esc_html__('No será publicado', 'videoplayer') . '</small></div>',
+                    'url'    => '<div class="comment-form-url"><label for="url" class="comment-form-label">' . esc_html__('Sitio web', 'videoplayer') . '</label><input id="url" name="url" type="url" value="' . esc_attr($commenter['comment_author_url']) . '" size="30" maxlength="200" placeholder="' . esc_attr__('https://tusitio.com (opcional)', 'videoplayer') . '" /></div>',
+                ),
+                'class_form'          => 'comment-form',
+                'class_submit'        => 'submit btn btn-primary',
+                'comment_notes_before' => '<div class="comment-notes"><p class="comment-notes-text">' . esc_html__('Tu dirección de email no será publicada.', 'videoplayer') . ($req ? ' ' . esc_html__('Los campos obligatorios están marcados con *', 'videoplayer') : '') . '</p></div>',
+                'comment_notes_after'  => '',
+            );
+
+            comment_form($comment_form_args);
+            ?>
+        </div>
+
+    <?php elseif (!comments_open() && get_comments_number() && post_type_supports(get_post_type(), 'comments')) : ?>
+        
+        <div class="comments-closed">
+            <div class="comments-closed-icon">🔒</div>
+            <h3><?php esc_html_e('Los comentarios están cerrados', 'videoplayer'); ?></h3>
+            <p><?php esc_html_e('Ya no se pueden agregar nuevos comentarios a este contenido.', 'videoplayer'); ?></p>
+        </div>
+
     <?php endif; ?>
 
-    <?php
-    // Comment form
-    if (comments_open()) :
-        $comment_form_args = array(
-            'title_reply'          => esc_html__('Deja tu comentario', 'videoplayer'),
-            'title_reply_to'       => esc_html__('Responder a %s', 'videoplayer'),
-            'title_reply_before'   => '<h3 id="reply-title" class="comment-reply-title">',
-            'title_reply_after'    => '</h3>',
-            'cancel_reply_before'  => ' <small>',
-            'cancel_reply_after'   => '</small>',
-            'cancel_reply_link'    => esc_html__('Cancelar respuesta', 'videoplayer'),
-            'label_submit'         => esc_html__('Publicar Comentario', 'videoplayer'),
-            'submit_button'        => '<button type="submit" id="%2$s" class="%3$s">%4$s</button>',
-            'submit_field'         => '<p class="form-submit">%1$s %2$s</p>',
-            'format'               => 'xhtml',
-            'comment_field'        => '<p class="comment-form-comment">
-                                        <label for="comment">' . esc_html__('Comentario', 'videoplayer') . ' <span class="required">*</span></label>
-                                        <textarea id="comment" name="comment" cols="45" rows="6" maxlength="65525" required="required" placeholder="' . esc_attr__('Escribe tu comentario aquí...', 'videoplayer') . '"></textarea>
-                                      </p>',
-            'must_log_in'          => '<p class="must-log-in">' . 
-                                      sprintf(
-                                          wp_kses(
-                                              __('Debes <a href="%s">iniciar sesión</a> para publicar un comentario.', 'videoplayer'),
-                                              array(
-                                                  'a' => array(
-                                                      'href' => array(),
-                                                  ),
-                                              )
-                                          ),
-                                          wp_login_url(apply_filters('the_permalink', get_permalink(get_the_ID())))
-                                      ) . '</p>',
-            'logged_in_as'         => '<p class="logged-in-as">' . 
-                                      sprintf(
-                                          wp_kses(
-                                              __('Conectado como <a href="%1$s">%2$s</a>. <a href="%3$s" title="Cerrar sesión">¿Cerrar sesión?</a>', 'videoplayer'),
-                                              array(
-                                                  'a' => array(
-                                                      'href'  => array(),
-                                                      'title' => array(),
-                                                  ),
-                                              )
-                                          ),
-                                          get_edit_user_link(),
-                                          $user_identity,
-                                          wp_logout_url(apply_filters('the_permalink', get_permalink(get_the_ID())))
-                                      ) . '</p>',
-            'comment_notes_before' => '<p class="comment-notes"><span id="email-notes">' . 
-                                      esc_html__('Tu dirección de correo electrónico no será publicada.', 'videoplayer') . '</span>' . 
-                                      ' <span class="required-field-message">' . 
-                                      esc_html__('Los campos requeridos están marcados con *', 'videoplayer') . '</span></p>',
-            'comment_notes_after'  => '',
-            'id_form'              => 'commentform',
-            'id_submit'            => 'submit',
-            'class_container'      => 'comment-respond',
-            'class_form'           => 'comment-form',
-            'class_submit'         => 'submit-comment-btn',
-            'name_submit'          => 'submit',
-            'fields'               => array(
-                'author' => '<p class="comment-form-author">
-                             <label for="author">' . esc_html__('Nombre', 'videoplayer') . ' <span class="required">*</span></label>
-                             <input id="author" name="author" type="text" value="' . esc_attr($commenter['comment_author']) . '" size="30" maxlength="245" required="required" placeholder="' . esc_attr__('Tu nombre', 'videoplayer') . '" />
-                           </p>',
-                'email'  => '<p class="comment-form-email">
-                             <label for="email">' . esc_html__('Email', 'videoplayer') . ' <span class="required">*</span></label>
-                             <input id="email" name="email" type="email" value="' . esc_attr($commenter['comment_author_email']) . '" size="30" maxlength="100" required="required" placeholder="' . esc_attr__('tu@email.com', 'videoplayer') . '" />
-                           </p>',
-                'url'    => '<p class="comment-form-url">
-                             <label for="url">' . esc_html__('Web', 'videoplayer') . '</label>
-                             <input id="url" name="url" type="url" value="' . esc_attr($commenter['comment_author_url']) . '" size="30" maxlength="200" placeholder="' . esc_attr__('https://tusitio.com (opcional)', 'videoplayer') . '" />
-                           </p>',
-                'cookies' => '<p class="comment-form-cookies-consent">
-                              <input id="wp-comment-cookies-consent" name="wp-comment-cookies-consent" type="checkbox" value="yes"' . (empty($commenter['comment_author_email']) ? '' : ' checked="checked"') . ' />
-                              <label for="wp-comment-cookies-consent">' . esc_html__('Guardar mi nombre, email y sitio web para la próxima vez que comente.', 'videoplayer') . '</label>
-                            </p>',
-            ),
-        );
+</section><!-- #comments -->
 
-        comment_form($comment_form_args);
-    endif;
+<?php
+/**
+ * Custom comment callback function
+ */
+function videoplayer_comment_callback($comment, $args, $depth) {
+    if ('div' === $args['style']) {
+        $tag       = 'div';
+        $add_below = 'comment';
+    } else {
+        $tag       = 'li';
+        $add_below = 'div-comment';
+    }
     ?>
+    <<?php echo $tag; ?> <?php comment_class(empty($args['has_children']) ? '' : 'parent'); ?> id="comment-<?php comment_ID(); ?>">
+        
+        <?php if ('div' != $args['style']) : ?>
+            <div id="div-comment-<?php comment_ID(); ?>" class="comment-body">
+        <?php endif; ?>
+        
+        <div class="comment-meta">
+            <div class="comment-author vcard">
+                <?php
+                if ($args['avatar_size'] != 0) {
+                    echo get_avatar($comment, $args['avatar_size'], '', '', array('class' => 'comment-avatar'));
+                }
+                ?>
+                
+                <div class="comment-author-info">
+                    <div class="comment-author-name">
+                        <?php
+                        $author_name = get_comment_author_link();
+                        if (!empty($author_name)) {
+                            echo $author_name;
+                        }
+                        ?>
+                        
+                        <?php if (get_comment_meta(get_comment_ID(), 'verified_user', true)) : ?>
+                            <span class="verified-badge" title="<?php esc_attr_e('Usuario verificado', 'videoplayer'); ?>">✓</span>
+                        <?php endif; ?>
+                        
+                        <?php if (user_can(get_comment_author_email(), 'administrator')) : ?>
+                            <span class="admin-badge" title="<?php esc_attr_e('Administrador', 'videoplayer'); ?>">👑</span>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <div class="comment-metadata">
+                        <time datetime="<?php comment_time('c'); ?>" title="<?php echo get_comment_date() . ' ' . get_comment_time(); ?>">
+                            <?php echo human_time_diff(get_comment_time('U'), current_time('timestamp')) . ' ago'; ?>
+                        </time>
+                        
+                        <?php edit_comment_link(esc_html__('Editar', 'videoplayer'), '<span class="comment-edit-link">', '</span>'); ?>
+                        
+                        <?php if (get_option('thread_comments') && $depth < $args['max_depth']) : ?>
+                            <span class="comment-reply">
+                                <?php
+                                comment_reply_link(array_merge($args, array(
+                                    'add_below' => $add_below,
+                                    'depth'     => $depth,
+                                    'max_depth' => $args['max_depth'],
+                                    'reply_text' => esc_html__('Responder', 'videoplayer'),
+                                )));
+                                ?>
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-</div><!-- #comments -->
+        <div class="comment-content">
+            <?php if ($comment->comment_approved == '0') : ?>
+                <em class="comment-awaiting-moderation">
+                    <?php esc_html_e('Tu comentario está esperando moderación.', 'videoplayer'); ?>
+                </em>
+            <?php endif; ?>
+            
+            <div class="comment-text">
+                <?php comment_text(); ?>
+            </div>
+            
+            <!-- Comment Actions -->
+            <div class="comment-actions">
+                <div class="comment-voting">
+                    <button class="vote-btn upvote" data-comment-id="<?php comment_ID(); ?>" data-vote="up">
+                        <span class="vote-icon">👍</span>
+                        <span class="vote-count"><?php echo get_comment_meta(get_comment_ID(), 'upvotes', true) ?: 0; ?></span>
+                    </button>
+                    
+                    <button class="vote-btn downvote" data-comment-id="<?php comment_ID(); ?>" data-vote="down">
+                        <span class="vote-icon">👎</span>
+                        <span class="vote-count"><?php echo get_comment_meta(get_comment_ID(), 'downvotes', true) ?: 0; ?></span>
+                    </button>
+                </div>
+                
+                <div class="comment-tools">
+                    <button class="comment-share" data-comment-id="<?php comment_ID(); ?>">
+                        <span class="icon">📤</span>
+                        <?php esc_html_e('Compartir', 'videoplayer'); ?>
+                    </button>
+                    
+                    <button class="comment-report" data-comment-id="<?php comment_ID(); ?>">
+                        <span class="icon">🚩</span>
+                        <?php esc_html_e('Reportar', 'videoplayer'); ?>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <?php if ('div' != $args['style']) : ?>
+            </div>
+        <?php endif; ?>
+    
+    <?php // Note: </li> is added automatically by WordPress ?>
+    <?php
+}
+?>
 
 <style>
 .comments-area {
-    margin-top: 40px;
-    padding: 30px 20px;
-    background: rgba(255, 255, 255, 0.02);
+    margin: 40px 0;
+    background: rgba(255, 255, 255, 0.05);
     border-radius: var(--border-radius);
     border: 1px solid var(--border-color);
+    padding: 30px;
+}
+
+.comments-header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .comments-title {
     font-size: 1.8rem;
-    margin-bottom: 30px;
     color: var(--primary-color);
-    text-align: center;
-    padding-bottom: 15px;
-    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 10px;
 }
 
-/* Comment Navigation */
-.comment-navigation {
-    margin-bottom: 30px;
+.comments-stats {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    font-size: 14px;
+    color: var(--muted-text);
 }
 
-.comment-navigation .nav-links {
+.comments-controls {
     display: flex;
     justify-content: space-between;
     align-items: center;
-}
-
-.comment-navigation a {
-    background: var(--hover-bg);
-    color: var(--light-text);
-    padding: 10px 20px;
-    border-radius: 6px;
-    text-decoration: none;
-    transition: var(--transition);
-    border: 1px solid var(--border-color);
-}
-
-.comment-navigation a:hover {
-    background: var(--primary-color);
-    border-color: var(--primary-color);
-}
-
-/* Comment List */
-.comment-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.comment-list .comment {
     margin-bottom: 30px;
+    padding: 15px;
     background: rgba(255, 255, 255, 0.05);
     border-radius: var(--border-radius);
     border: 1px solid var(--border-color);
+}
+
+.comments-sort {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.comments-sort label {
+    font-size: 14px;
+    color: var(--muted-text);
+}
+
+.comments-sort select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
+    color: var(--light-text);
+    padding: 6px 12px;
+    border-radius: 4px;
+}
+
+.comments-view-toggle {
+    display: flex;
+    gap: 5px;
+}
+
+.view-toggle {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
+    color: var(--muted-text);
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 12px;
+}
+
+.view-toggle:hover,
+.view-toggle.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.comments-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 30px 0;
+}
+
+.comment {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    margin-bottom: 20px;
+    padding: 20px;
     transition: var(--transition);
 }
 
-.comment-list .comment:hover {
+.comment:hover {
     background: rgba(255, 255, 255, 0.08);
 }
 
-.comment-body {
-    padding: 20px;
+.comment.parent {
+    background: rgba(255, 255, 255, 0.08);
 }
 
-.comment-author {
+.children {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0 0 40px;
+}
+
+.children .comment {
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 3px solid var(--primary-color);
+}
+
+.comment-body {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.comment-meta {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+}
+
+.comment-avatar {
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+    width: 50px;
+    height: 50px;
+    flex-shrink: 0;
+}
+
+.comment-author-info {
+    flex: 1;
+}
+
+.comment-author-name {
+    font-weight: 600;
+    color: var(--light-text);
+    margin-bottom: 5px;
     display: flex;
     align-items: center;
-    margin-bottom: 15px;
+    gap: 8px;
 }
 
-.comment-author .avatar {
-    border-radius: 50%;
-    margin-right: 15px;
-    border: 2px solid var(--border-color);
-}
-
-.comment-author .fn {
-    font-weight: 600;
+.comment-author-name a {
     color: var(--primary-color);
     text-decoration: none;
-    margin-right: 10px;
 }
 
-.comment-author .says {
-    display: none;
+.verified-badge {
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.admin-badge {
+    background: gold;
+    color: #333;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
 }
 
 .comment-metadata {
+    display: flex;
+    gap: 15px;
     font-size: 12px;
     color: var(--muted-text);
-    margin-bottom: 15px;
 }
 
 .comment-metadata a {
@@ -277,117 +486,184 @@ if (post_password_required()) {
 }
 
 .comment-content {
-    line-height: 1.6;
-    margin-bottom: 15px;
+    margin-left: 65px;
 }
 
-.comment-content p {
-    margin-bottom: 15px;
-}
-
-.comment-content p:last-child {
-    margin-bottom: 0;
-}
-
-.reply {
-    text-align: right;
-}
-
-.comment-reply-link {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--muted-text);
-    padding: 6px 12px;
-    border-radius: 4px;
-    text-decoration: none;
-    font-size: 12px;
-    transition: var(--transition);
-    border: 1px solid var(--border-color);
-}
-
-.comment-reply-link:hover {
-    background: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-}
-
-/* Nested Comments */
-.comment-list .children {
-    list-style: none;
-    margin: 20px 0 0 40px;
-    padding: 0;
-}
-
-.comment-list .children .comment {
-    border-left: 3px solid var(--primary-color);
-    border-radius: 0 var(--border-radius) var(--border-radius) 0;
-}
-
-/* Comment Awaiting Moderation */
 .comment-awaiting-moderation {
     background: rgba(255, 193, 7, 0.1);
     color: #ffc107;
-    padding: 10px 15px;
-    border-radius: 6px;
-    margin-bottom: 15px;
+    padding: 10px;
+    border-radius: 4px;
     border: 1px solid rgba(255, 193, 7, 0.3);
-    font-size: 14px;
+    margin-bottom: 15px;
+    display: block;
 }
 
-/* Comment Form */
-.comment-respond {
-    margin-top: 40px;
-    padding: 30px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: var(--border-radius);
+.comment-text {
+    line-height: 1.6;
+    color: var(--light-text);
+    margin-bottom: 15px;
+}
+
+.comment-text p {
+    margin-bottom: 10px;
+}
+
+.comment-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+.comment-voting {
+    display: flex;
+    gap: 10px;
+}
+
+.vote-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
+    color: var(--muted-text);
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+}
+
+.vote-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.vote-btn.upvote.voted {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4caf50;
+    border-color: #4caf50;
+}
+
+.vote-btn.downvote.voted {
+    background: rgba(244, 67, 54, 0.2);
+    color: #f44336;
+    border-color: #f44336;
+}
+
+.comment-tools {
+    display: flex;
+    gap: 10px;
+}
+
+.comment-share,
+.comment-report {
+    background: none;
+    border: none;
+    color: var(--muted-text);
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+.comment-share:hover {
+    color: var(--primary-color);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.comment-report:hover {
+    color: #f44336;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.comments-pagination {
+    text-align: center;
+    margin: 30px 0;
+}
+
+.comments-pagination .nav-links {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.comments-pagination a {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--light-text);
+    padding: 10px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: var(--transition);
     border: 1px solid var(--border-color);
 }
 
-.comment-reply-title {
+.comments-pagination a:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.comment-form-section {
+    margin-top: 40px;
+    padding-top: 30px;
+    border-top: 2px solid var(--border-color);
+}
+
+.comment-form-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.comment-form-title {
     font-size: 1.5rem;
-    margin-bottom: 20px;
     color: var(--primary-color);
+    margin-bottom: 10px;
 }
 
-.comment-reply-title small {
-    font-size: 14px;
-    font-weight: normal;
-}
-
-.comment-reply-title small a {
+.comment-form-description {
     color: var(--muted-text);
-    text-decoration: none;
-    transition: var(--transition);
+    font-size: 14px;
 }
 
-.comment-reply-title small a:hover {
-    color: var(--primary-color);
+.comment-form {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 25px;
 }
 
 .comment-notes {
-    color: var(--muted-text);
-    font-size: 14px;
     margin-bottom: 20px;
-    line-height: 1.5;
+    padding: 15px;
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: 6px;
+    color: #ffc107;
+    font-size: 14px;
+}
+
+.comment-form-author,
+.comment-form-email,
+.comment-form-url,
+.comment-form-comment {
+    margin-bottom: 20px;
+}
+
+.comment-form-label {
+    display: block;
+    color: var(--light-text);
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 14px;
 }
 
 .required {
     color: var(--primary-color);
-}
-
-.comment-form {
-    display: grid;
-    gap: 20px;
-}
-
-.comment-form p {
-    margin: 0;
-}
-
-.comment-form label {
-    display: block;
-    margin-bottom: 8px;
-    color: var(--light-text);
-    font-weight: 500;
 }
 
 .comment-form input[type="text"],
@@ -395,28 +671,22 @@ if (post_password_required()) {
 .comment-form input[type="url"],
 .comment-form textarea {
     width: 100%;
-    background: var(--hover-bg);
+    background: rgba(255, 255, 255, 0.1);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
-    padding: 12px 15px;
     color: var(--light-text);
+    padding: 12px 15px;
+    border-radius: 6px;
     font-size: 14px;
     transition: var(--transition);
-    font-family: inherit;
+    outline: none;
 }
 
 .comment-form input[type="text"]:focus,
 .comment-form input[type="email"]:focus,
 .comment-form input[type="url"]:focus,
 .comment-form textarea:focus {
-    outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
-}
-
-.comment-form input::placeholder,
-.comment-form textarea::placeholder {
-    color: var(--muted-text);
+    background: rgba(255, 255, 255, 0.15);
 }
 
 .comment-form textarea {
@@ -424,497 +694,241 @@ if (post_password_required()) {
     min-height: 120px;
 }
 
-.comment-form-cookies-consent {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
+.comment-form input::placeholder,
+.comment-form textarea::placeholder {
+    color: var(--muted-text);
 }
 
-.comment-form-cookies-consent input[type="checkbox"] {
-    width: auto;
-    margin-top: 2px;
-    accent-color: var(--primary-color);
+.comment-guidelines {
+    margin-top: 8px;
 }
 
-.comment-form-cookies-consent label {
-    margin-bottom: 0;
-    font-size: 13px;
+.comment-guidelines small {
+    color: var(--muted-text);
+    font-size: 12px;
     line-height: 1.4;
 }
 
 .form-submit {
-    text-align: center;
-    margin-top: 10px;
+    margin-top: 25px;
 }
 
-.submit-comment-btn {
+.comment-form .btn {
     background: var(--gradient-primary);
     color: white;
     border: none;
     padding: 12px 30px;
-    border-radius: 8px;
-    font-size: 16px;
+    border-radius: 6px;
     font-weight: 600;
     cursor: pointer;
     transition: var(--transition);
-    position: relative;
-    overflow: hidden;
-}
-
-.submit-comment-btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-light);
-}
-
-.submit-comment-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.submit-comment-btn.loading {
-    color: transparent;
-}
-
-.submit-comment-btn.loading::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: translate(-50%, -50%) rotate(360deg); }
-}
-
-/* No Comments */
-.no-comments {
-    text-align: center;
-    color: var(--muted-text);
-    font-style: italic;
-    padding: 30px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: var(--border-radius);
-    border: 1px solid var(--border-color);
-}
-
-/* Must Log In */
-.must-log-in {
-    text-align: center;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    padding: 30px;
-    color: var(--muted-text);
-}
-
-.must-log-in a {
-    color: var(--primary-color);
-    text-decoration: none;
-    font-weight: 600;
-    transition: var(--transition);
-}
-
-.must-log-in a:hover {
-    text-decoration: underline;
-}
-
-/* Logged In As */
-.logged-in-as {
-    background: rgba(78, 205, 196, 0.1);
-    border: 1px solid rgba(78, 205, 196, 0.3);
-    border-radius: var(--border-radius);
-    padding: 15px;
-    margin-bottom: 20px;
-    color: var(--secondary-color);
     font-size: 14px;
 }
 
-.logged-in-as a {
-    color: var(--secondary-color);
-    text-decoration: none;
-    font-weight: 600;
+.comment-form .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-light);
 }
 
-.logged-in-as a:hover {
-    text-decoration: underline;
+.comments-closed {
+    text-align: center;
+    padding: 40px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
 }
 
-/* Responsive */
-@media (min-width: 768px) {
-    .comment-form {
-        grid-template-columns: 1fr 1fr;
-        grid-template-areas: 
-            "author email"
-            "url url"
-            "comment comment"
-            "cookies cookies"
-            "submit submit";
-    }
-    
-    .comment-form-author { grid-area: author; }
-    .comment-form-email { grid-area: email; }
-    .comment-form-url { grid-area: url; }
-    .comment-form-comment { grid-area: comment; }
-    .comment-form-cookies-consent { grid-area: cookies; }
-    .form-submit { grid-area: submit; }
+.comments-closed-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    opacity: 0.6;
+}
+
+.comments-closed h3 {
+    color: var(--muted-text);
+    margin-bottom: 10px;
+}
+
+.comments-closed p {
+    color: var(--muted-text);
+    font-size: 14px;
 }
 
 @media (max-width: 768px) {
-    .comment-list .children {
+    .comments-area {
+        padding: 20px;
+    }
+    
+    .comments-controls {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .comment-meta {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .comment-content {
+        margin-left: 0;
+    }
+    
+    .children {
         margin-left: 20px;
     }
     
-    .comment-author .avatar {
-        width: 40px;
-        height: 40px;
+    .comment-actions {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
     }
     
-    .comments-area {
-        padding: 20px 15px;
-    }
-    
-    .comment-respond {
-        padding: 20px 15px;
+    .comment-voting,
+    .comment-tools {
+        justify-content: center;
     }
 }
 
 @media (max-width: 480px) {
-    .comments-title {
-        font-size: 1.5rem;
+    .comments-stats {
+        flex-direction: column;
+        gap: 5px;
     }
     
-    .comment-reply-title {
-        font-size: 1.3rem;
+    .comment-avatar {
+        width: 40px;
+        height: 40px;
     }
     
-    .comment-list .children {
+    .children {
         margin-left: 10px;
     }
-    
-    .comment-navigation .nav-links {
-        flex-direction: column;
-        gap: 10px;
-    }
-}
-
-/* Dark mode specific adjustments */
-@media (prefers-color-scheme: dark) {
-    .comment-form input[type="text"],
-    .comment-form input[type="email"],
-    .comment-form input[type="url"],
-    .comment-form textarea {
-        color-scheme: dark;
-    }
-}
-
-/* Accessibility improvements */
-.comment-form input:invalid {
-    border-color: #dc3545;
-    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
-}
-
-.comment-form input:valid {
-    border-color: #28a745;
-}
-
-/* Comment threading indicators */
-.comment-list .depth-2 { padding-left: 20px; }
-.comment-list .depth-3 { padding-left: 40px; }
-.comment-list .depth-4 { padding-left: 60px; }
-.comment-list .depth-5 { padding-left: 80px; }
-
-@media (max-width: 768px) {
-    .comment-list .depth-2 { padding-left: 10px; }
-    .comment-list .depth-3 { padding-left: 20px; }
-    .comment-list .depth-4 { padding-left: 30px; }
-    .comment-list .depth-5 { padding-left: 40px; }
 }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Comment form enhancements
-    const commentForm = document.getElementById('commentform');
-    const submitBtn = document.getElementById('submit');
-    
-    if (commentForm && submitBtn) {
-        // Add loading state on form submission
-        commentForm.addEventListener('submit', function() {
-            submitBtn.classList.add('loading');
-            submitBtn.disabled = true;
-        });
-        
-        // Character counter for comment textarea
-        const commentTextarea = document.getElementById('comment');
-        if (commentTextarea) {
-            const maxLength = commentTextarea.getAttribute('maxlength');
-            if (maxLength) {
-                const counter = document.createElement('div');
-                counter.className = 'character-counter';
-                counter.style.cssText = `
-                    text-align: right;
-                    color: var(--muted-text);
-                    font-size: 12px;
-                    margin-top: 5px;
-                `;
-                
-                const updateCounter = () => {
-                    const remaining = maxLength - commentTextarea.value.length;
-                    counter.textContent = remaining + ' caracteres restantes';
-                    
-                    if (remaining < 100) {
-                        counter.style.color = 'var(--primary-color)';
-                    } else {
-                        counter.style.color = 'var(--muted-text)';
-                    }
-                };
-                
-                commentTextarea.addEventListener('input', updateCounter);
-                commentTextarea.parentNode.appendChild(counter);
-                updateCounter();
-            }
-        }
-        
-        // Auto-resize textarea
-        if (commentTextarea) {
-            commentTextarea.addEventListener('input', function() {
-                this.style.height = 'auto';
-                this.style.height = this.scrollHeight + 'px';
-            });
-        }
-        
-        // Save comment draft
-        const saveCommentDraft = () => {
-            if (commentTextarea && commentTextarea.value.trim()) {
-                localStorage.setItem('commentDraft_' + window.location.pathname, commentTextarea.value);
-            }
-        };
-        
-        const loadCommentDraft = () => {
-            if (commentTextarea) {
-                const draft = localStorage.getItem('commentDraft_' + window.location.pathname);
-                if (draft) {
-                    commentTextarea.value = draft;
-                }
-            }
-        };
-        
-        // Load draft on page load
-        loadCommentDraft();
-        
-        // Save draft periodically
-        if (commentTextarea) {
-            commentTextarea.addEventListener('input', saveCommentDraft);
-        }
-        
-        // Clear draft on successful submission
-        commentForm.addEventListener('submit', function() {
-            setTimeout(() => {
-                localStorage.removeItem('commentDraft_' + window.location.pathname);
-            }, 1000);
-        });
-    }
-    
-    // Smooth scroll to comments on reply
-    const replyLinks = document.querySelectorAll('.comment-reply-link');
-    replyLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            setTimeout(() => {
-                const respondDiv = document.getElementById('respond');
-                if (respondDiv) {
-                    respondDiv.scrollIntoView({ 
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            }, 100);
+    initCommentsFunctionality();
+});
+
+function initCommentsFunctionality() {
+    // Comment voting
+    const voteButtons = document.querySelectorAll('.vote-btn');
+    voteButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const commentId = this.dataset.commentId;
+            const voteType = this.dataset.vote;
+            handleCommentVote(commentId, voteType, this);
         });
     });
     
-    // Add animation to new comments
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('comment-submitted') === '1') {
-        const comments = document.querySelectorAll('.comment');
-        if (comments.length > 0) {
-            const lastComment = comments[comments.length - 1];
-            lastComment.style.animation = 'fadeInUp 0.6s ease-out';
-            lastComment.scrollIntoView({ 
-                behavior: 'smooth',
-                block: 'center'
-            });
-        }
-    }
-    
-    // Comment voting (if you want to add this feature)
-    const addCommentVoting = () => {
-        const comments = document.querySelectorAll('.comment-body');
-        
-        comments.forEach(comment => {
-            const commentId = comment.closest('.comment').id.replace('comment-', '');
-            
-            const voteContainer = document.createElement('div');
-            voteContainer.className = 'comment-voting';
-            voteContainer.innerHTML = `
-                <button class="vote-btn upvote" data-comment-id="${commentId}" data-vote="up">
-                    👍 <span class="vote-count">0</span>
-                </button>
-                <button class="vote-btn downvote" data-comment-id="${commentId}" data-vote="down">
-                    👎 <span class="vote-count">0</span>
-                </button>
-            `;
-            
-            // Add CSS for voting buttons
-            voteContainer.style.cssText = `
-                display: flex;
-                gap: 10px;
-                margin-top: 10px;
-                align-items: center;
-            `;
-            
-            const voteBtns = voteContainer.querySelectorAll('.vote-btn');
-            voteBtns.forEach(btn => {
-                btn.style.cssText = `
-                    background: rgba(255, 255, 255, 0.1);
-                    border: 1px solid var(--border-color);
-                    color: var(--muted-text);
-                    padding: 4px 8px;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-size: 12px;
-                    transition: var(--transition);
-                `;
-                
-                btn.addEventListener('click', function() {
-                    // Here you would make an AJAX call to record the vote
-                    console.log('Vote:', this.dataset.vote, 'Comment:', this.dataset.commentId);
-                    
-                    // Visual feedback
-                    this.style.background = 'var(--primary-color)';
-                    this.style.color = 'white';
-                    
-                    // Increment count (demo)
-                    const countSpan = this.querySelector('.vote-count');
-                    countSpan.textContent = parseInt(countSpan.textContent) + 1;
-                });
-            });
-            
-            comment.appendChild(voteContainer);
+    // Comment sharing
+    const shareButtons = document.querySelectorAll('.comment-share');
+    shareButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const commentId = this.dataset.commentId;
+            shareComment(commentId);
         });
-    };
+    });
     
-    // Uncomment to enable comment voting
-    // addCommentVoting();
-    
-    // Real-time comment updates (WebSocket example)
-    const enableRealTimeComments = () => {
-        // This would require WebSocket implementation on the server
-        /*
-        const ws = new WebSocket('wss://yoursite.com/comments');
-        
-        ws.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            if (data.type === 'new_comment' && data.post_id == getCurrentPostId()) {
-                // Add new comment to the list
-                addNewCommentToList(data.comment);
-            }
-        };
-        */
-    };
-    
-    // Comment moderation helpers (for administrators)
-    if (document.body.classList.contains('admin-bar')) {
-        addAdminCommentControls();
-    }
-    
-    function addAdminCommentControls() {
-        const comments = document.querySelectorAll('.comment');
-        
-        comments.forEach(comment => {
-            const commentId = comment.id.replace('comment-', '');
-            const adminControls = document.createElement('div');
-            adminControls.className = 'admin-comment-controls';
-            adminControls.style.cssText = `
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                display: flex;
-                gap: 5px;
-                opacity: 0;
-                transition: opacity 0.3s ease;
-            `;
-            
-            adminControls.innerHTML = `
-                <button class="admin-btn approve" data-comment-id="${commentId}" title="Aprobar">✅</button>
-                <button class="admin-btn delete" data-comment-id="${commentId}" title="Eliminar">❌</button>
-            `;
-            
-            comment.style.position = 'relative';
-            comment.appendChild(adminControls);
-            
-            comment.addEventListener('mouseenter', () => {
-                adminControls.style.opacity = '1';
-            });
-            
-            comment.addEventListener('mouseleave', () => {
-                adminControls.style.opacity = '0';
-            });
+    // Comment reporting
+    const reportButtons = document.querySelectorAll('.comment-report');
+    reportButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const commentId = this.dataset.commentId;
+            reportComment(commentId);
         });
-    }
-});
-</script>
-
-<?php
-/**
- * Custom comment callback function
- */
-function videoplayer_comment_callback($comment, $args, $depth) {
-    $tag = ($args['style'] === 'div') ? 'div' : 'li';
-    ?>
-    <<?php echo $tag; ?> id="comment-<?php comment_ID(); ?>" <?php comment_class(empty($args['has_children']) ? '' : 'parent'); ?>>
-        <div class="comment-body">
-            <div class="comment-author vcard">
-                <?php if ($args['avatar_size'] != 0) echo get_avatar($comment, $args['avatar_size']); ?>
-                <span class="fn"><?php echo get_comment_author_link(); ?></span>
-                <?php if (get_comment_author_url()) : ?>
-                    <span class="author-badge">🌐</span>
-                <?php endif; ?>
-            </div>
-            
-            <div class="comment-metadata">
-                <a href="<?php echo esc_url(get_comment_link($comment->comment_ID)); ?>">
-                    <time datetime="<?php comment_time('c'); ?>">
-                        <?php printf(esc_html__('%1$s a las %2$s', 'videoplayer'), get_comment_date(), get_comment_time()); ?>
-                    </time>
-                </a>
-                <?php edit_comment_link(esc_html__('(Editar)', 'videoplayer'), '  ', ''); ?>
-            </div>
-
-            <?php if ($comment->comment_approved == '0') : ?>
-                <em class="comment-awaiting-moderation">
-                    <?php esc_html_e('Tu comentario está pendiente de moderación.', 'videoplayer'); ?>
-                </em>
-            <?php endif; ?>
-
-            <div class="comment-content">
-                <?php comment_text(); ?>
-            </div>
-
-            <div class="reply">
-                <?php comment_reply_link(array_merge($args, array(
-                    'add_below' => 'comment',
-                    'depth'     => $depth,
-                    'max_depth' => $args['max_depth']
-                ))); ?>
-            </div>
-        </div>
-    <?php
-    // Don't close the tag here - WordPress handles that
+    });
 }
-?>
+
+function handleCommentVote(commentId, voteType, button) {
+    // AJAX call to handle voting
+    const formData = new FormData();
+    formData.append('action', 'comment_vote');
+    formData.append('comment_id', commentId);
+    formData.append('vote_type', voteType);
+    formData.append('nonce', videoPlayerAjax.nonce);
+    
+    fetch(videoPlayerAjax.ajaxurl, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update vote count
+            const countSpan = button.querySelector('.vote-count');
+            countSpan.textContent = data.data.count;
+            
+            // Update button state
+            button.classList.toggle('voted');
+        }
+    })
+    .catch(error => {
+        console.error('Error voting on comment:', error);
+    });
+}
+
+function shareComment(commentId) {
+    const commentElement = document.getElementById('comment-' + commentId);
+    const commentUrl = window.location.href + '#comment-' + commentId;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: 'Comentario interesante',
+            url: commentUrl
+        });
+    } else {
+        navigator.clipboard.writeText(commentUrl);
+        alert('¡Enlace del comentario copiado!');
+    }
+}
+
+function reportComment(commentId) {
+    if (confirm('¿Estás seguro de que quieres reportar este comentario?')) {
+        const formData = new FormData();
+        formData.append('action', 'report_comment');
+        formData.append('comment_id', commentId);
+        formData.append('nonce', videoPlayerAjax.nonce);
+        
+        fetch(videoPlayerAjax.ajaxurl, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Comentario reportado. Gracias por mantener la comunidad segura.');
+            }
+        })
+        .catch(error => {
+            console.error('Error reporting comment:', error);
+        });
+    }
+}
+
+function sortComments(sortBy) {
+    // Implementation for sorting comments
+    // This would typically reload the page with sort parameters
+    const url = new URL(window.location);
+    url.searchParams.set('comment_order', sortBy);
+    window.location.href = url.toString();
+}
+
+function toggleCommentsView(view) {
+    const toggles = document.querySelectorAll('.view-toggle');
+    const commentsList = document.getElementById('comments-list');
+    
+    toggles.forEach(toggle => {
+        toggle.classList.remove('active');
+    });
+    
+    document.querySelector(`[data-view="${view}"]`).classList.add('active');
+    
+    if (view === 'flat') {
+        commentsList.classList.add('flat-view');
+    } else {
+        commentsList.classList.remove('flat-view');
+    }
+}
+</script>

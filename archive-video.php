@@ -1,6 +1,6 @@
 <?php
 /**
- * Archive template for videos
+ * Video Archive Template
  * 
  * @package VideoPlayerMobile
  */
@@ -8,86 +8,186 @@
 get_header(); ?>
 
 <div class="container">
-    <header class="archive-header">
+    <div class="archive-header">
         <h1 class="archive-title">
-            <?php
+            <?php 
             if (is_category()) {
                 single_cat_title();
             } elseif (is_tag()) {
-                printf(esc_html__('Etiqueta: %s', 'videoplayer'), single_tag_title('', false));
-            } elseif (isset($_GET['orderby']) && $_GET['orderby'] === 'popular') {
-                esc_html_e('Videos Populares', 'videoplayer');
+                single_tag_title();
+            } elseif (is_tax()) {
+                single_term_title();
             } else {
-                esc_html_e('Todos los Videos', 'videoplayer');
+                esc_html_e('Videos', 'videoplayer');
             }
             ?>
         </h1>
         
-        <?php if (is_category() && category_description()) : ?>
+        <?php if (is_category() || is_tag() || is_tax()) : ?>
             <div class="archive-description">
-                <?php echo category_description(); ?>
+                <?php echo term_description(); ?>
             </div>
         <?php endif; ?>
-        
-        <div class="archive-stats">
-            <?php
-            global $wp_query;
-            $total_videos = $wp_query->found_posts;
-            printf(
-                esc_html(_n('%d video encontrado', '%d videos encontrados', $total_videos, 'videoplayer')),
-                number_format_i18n($total_videos)
-            );
-            ?>
-        </div>
-    </header>
 
-    <!-- Filter and Sort Options -->
-    <div class="video-filters">
-        <div class="filter-group">
-            <label for="sort-select" class="filter-label"><?php esc_html_e('Ordenar por:', 'videoplayer'); ?></label>
-            <select id="sort-select" class="filter-select">
-                <option value="date" <?php selected(get_query_var('orderby'), 'date'); ?>>
-                    <?php esc_html_e('Más recientes', 'videoplayer'); ?>
-                </option>
-                <option value="popular" <?php selected(isset($_GET['orderby']) ? $_GET['orderby'] : '', 'popular'); ?>>
-                    <?php esc_html_e('Más populares', 'videoplayer'); ?>
-                </option>
-                <option value="title" <?php selected(get_query_var('orderby'), 'title'); ?>>
-                    <?php esc_html_e('Alfabético', 'videoplayer'); ?>
-                </option>
-                <option value="duration" <?php selected(get_query_var('orderby'), 'duration'); ?>>
-                    <?php esc_html_e('Duración', 'videoplayer'); ?>
-                </option>
-            </select>
-        </div>
-        
-        <div class="filter-group">
-            <label for="view-toggle" class="filter-label"><?php esc_html_e('Vista:', 'videoplayer'); ?></label>
-            <div class="view-toggle" id="view-toggle">
-                <button class="view-btn active" data-view="grid" aria-label="<?php esc_attr_e('Vista en grilla', 'videoplayer'); ?>">⊞</button>
-                <button class="view-btn" data-view="list" aria-label="<?php esc_attr_e('Vista en lista', 'videoplayer'); ?>">☰</button>
-            </div>
-        </div>
-        
-        <div class="search-filter">
-            <?php get_search_form(); ?>
+        <!-- Video Stats -->
+        <div class="archive-stats">
+            <span class="total-videos">
+                <?php 
+                global $wp_query;
+                printf(
+                    esc_html(_n('%d video encontrado', '%d videos encontrados', $wp_query->found_posts, 'videoplayer')),
+                    number_format_i18n($wp_query->found_posts)
+                );
+                ?>
+            </span>
         </div>
     </div>
 
-    <?php if (have_posts()) : ?>
-        
-        <div class="videos-container">
-            <div class="videos-grid" id="videos-container">
+    <!-- Filter and Sort Controls -->
+    <div class="video-controls">
+        <div class="view-controls">
+            <button class="view-toggle active" data-view="grid" aria-label="<?php esc_attr_e('Vista de cuadrícula', 'videoplayer'); ?>">
+                <span class="icon">⊞</span>
+            </button>
+            <button class="view-toggle" data-view="list" aria-label="<?php esc_attr_e('Vista de lista', 'videoplayer'); ?>">
+                <span class="icon">☰</span>
+            </button>
+        </div>
+
+        <div class="filter-controls">
+            <!-- Category Filter -->
+            <div class="filter-group">
+                <label for="category-filter"><?php esc_html_e('Categoría:', 'videoplayer'); ?></label>
+                <select id="category-filter" class="filter-select">
+                    <option value=""><?php esc_html_e('Todas las categorías', 'videoplayer'); ?></option>
+                    <?php
+                    $categories = get_terms(array(
+                        'taxonomy' => 'category',
+                        'hide_empty' => true,
+                    ));
+                    
+                    foreach ($categories as $category) {
+                        $selected = (is_category($category->term_id)) ? 'selected' : '';
+                        echo '<option value="' . esc_attr($category->slug) . '" ' . $selected . '>';
+                        echo esc_html($category->name) . ' (' . $category->count . ')';
+                        echo '</option>';
+                    }
+                    ?>
+                </select>
+            </div>
+
+            <!-- Sort Options -->
+            <div class="filter-group">
+                <label for="sort-filter"><?php esc_html_e('Ordenar por:', 'videoplayer'); ?></label>
+                <select id="sort-filter" class="filter-select">
+                    <option value="date" <?php selected(get_query_var('orderby'), 'date'); ?>><?php esc_html_e('Más recientes', 'videoplayer'); ?></option>
+                    <option value="popular" <?php selected(get_query_var('orderby'), 'popular'); ?>><?php esc_html_e('Más populares', 'videoplayer'); ?></option>
+                    <option value="title" <?php selected(get_query_var('orderby'), 'title'); ?>><?php esc_html_e('Título A-Z', 'videoplayer'); ?></option>
+                    <option value="duration" <?php selected(get_query_var('orderby'), 'duration'); ?>><?php esc_html_e('Duración', 'videoplayer'); ?></option>
+                </select>
+            </div>
+
+            <!-- Duration Filter -->
+            <div class="filter-group">
+                <label for="duration-filter"><?php esc_html_e('Duración:', 'videoplayer'); ?></label>
+                <select id="duration-filter" class="filter-select">
+                    <option value=""><?php esc_html_e('Cualquier duración', 'videoplayer'); ?></option>
+                    <option value="short"><?php esc_html_e('Corto (< 5 min)', 'videoplayer'); ?></option>
+                    <option value="medium"><?php esc_html_e('Medio (5-15 min)', 'videoplayer'); ?></option>
+                    <option value="long"><?php esc_html_e('Largo (> 15 min)', 'videoplayer'); ?></option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Search in Videos -->
+        <div class="video-search">
+            <form role="search" method="get" class="search-form" action="<?php echo esc_url(home_url('/')); ?>">
+                <input type="search" 
+                       class="search-field" 
+                       placeholder="<?php esc_attr_e('Buscar videos...', 'videoplayer'); ?>" 
+                       value="<?php echo get_search_query(); ?>" 
+                       name="s">
+                <input type="hidden" name="post_type" value="video">
+                <button type="submit" class="search-submit" aria-label="<?php esc_attr_e('Buscar', 'videoplayer'); ?>">
+                    <span class="icon">🔍</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Featured Videos Section -->
+    <?php if (is_home() || is_post_type_archive('video')) : ?>
+        <?php
+        $featured_videos = get_featured_videos(3);
+        if ($featured_videos->have_posts()) :
+        ?>
+            <section class="featured-videos-section">
+                <h2 class="section-title"><?php esc_html_e('Videos Destacados', 'videoplayer'); ?></h2>
+                
+                <div class="featured-videos-grid">
+                    <?php while ($featured_videos->have_posts()) : $featured_videos->the_post(); ?>
+                        <article class="featured-video-card">
+                            <div class="featured-video-thumbnail">
+                                <a href="<?php the_permalink(); ?>">
+                                    <?php if (has_post_thumbnail()) : ?>
+                                        <?php the_post_thumbnail('video-large'); ?>
+                                    <?php else : ?>
+                                        <div class="thumbnail-placeholder">
+                                            <span class="video-icon">▶</span>
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <div class="video-overlay">
+                                        <div class="play-btn">
+                                            <div class="play-icon"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="video-badges">
+                                        <span class="featured-badge"><?php esc_html_e('Destacado', 'videoplayer'); ?></span>
+                                    </div>
+                                    
+                                    <div class="video-duration"><?php echo esc_html(get_video_duration()); ?></div>
+                                </a>
+                            </div>
+                            
+                            <div class="featured-video-content">
+                                <h3 class="featured-video-title">
+                                    <a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
+                                </h3>
+                                
+                                <div class="featured-video-meta">
+                                    <span class="views">👁️ <?php echo number_format(get_video_views()); ?></span>
+                                    <span class="date">📅 <?php echo human_time_diff(get_the_time('U'), current_time('timestamp')); ?> ago</span>
+                                </div>
+                                
+                                <div class="featured-video-excerpt">
+                                    <?php echo wp_trim_words(get_the_excerpt(), 20); ?>
+                                </div>
+                            </div>
+                        </article>
+                    <?php endwhile; ?>
+                    <?php wp_reset_postdata(); ?>
+                </div>
+            </section>
+        <?php endif; ?>
+    <?php endif; ?>
+
+    <!-- Videos Grid/List -->
+    <main class="videos-main">
+        <?php if (have_posts()) : ?>
+            
+            <div class="videos-container" id="videos-grid" data-view="grid">
                 <?php while (have_posts()) : the_post(); ?>
                     
-                    <article id="post-<?php the_ID(); ?>" <?php post_class('video-card fade-in'); ?>>
+                    <article id="post-<?php the_ID(); ?>" <?php post_class('video-card'); ?>>
                         <div class="video-thumbnail">
-                            <a href="<?php the_permalink(); ?>" aria-label="<?php the_title_attribute(); ?>">
+                            <a href="<?php the_permalink(); ?>" onclick="handleVideoClick(event)">
                                 <?php if (has_post_thumbnail()) : ?>
-                                    <?php the_post_thumbnail('medium_large', array('loading' => 'lazy')); ?>
+                                    <?php the_post_thumbnail('video-thumbnail'); ?>
                                 <?php else : ?>
                                     <div class="thumbnail-placeholder">
-                                        <span class="play-icon">▶</span>
+                                        <span class="video-icon">▶</span>
                                     </div>
                                 <?php endif; ?>
                                 
@@ -97,142 +197,103 @@ get_header(); ?>
                                     </div>
                                 </div>
                                 
-                                <div class="video-duration"><?php echo esc_html(get_video_duration()); ?></div>
+                                <?php if (get_theme_mod('show_video_duration', true)) : ?>
+                                    <div class="video-duration"><?php echo esc_html(get_video_duration()); ?></div>
+                                <?php endif; ?>
                                 
-                                <?php if (is_redirect_enabled()) : ?>
-                                    <div class="redirect-badge" title="<?php esc_attr_e('Video con redirección', 'videoplayer'); ?>">🔗</div>
+                                <?php if (is_featured_video()) : ?>
+                                    <div class="video-badges">
+                                        <span class="featured-badge"><?php esc_html_e('Destacado', 'videoplayer'); ?></span>
+                                    </div>
                                 <?php endif; ?>
                             </a>
                         </div>
-
-                        <div class="video-card-content">
-                            <h3 class="video-card-title">
+                        
+                        <div class="video-content">
+                            <h3 class="video-title">
                                 <a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
                             </h3>
-
-                            <div class="video-card-meta">
-                                <div class="meta-primary">
+                            
+                            <div class="video-meta">
+                                <?php if (get_theme_mod('show_view_count', true)) : ?>
                                     <span class="views">👁️ <?php echo number_format(get_video_views()); ?></span>
-                                    <span class="date">📅 <?php echo human_time_diff(get_the_time('U'), current_time('timestamp')); ?> ago</span>
-                                </div>
-                                
-                                <?php if (has_category()) : ?>
-                                    <div class="meta-categories">
-                                        <?php the_category(' '); ?>
-                                    </div>
                                 <?php endif; ?>
+                                <span class="date">📅 <?php echo human_time_diff(get_the_time('U'), current_time('timestamp')); ?> ago</span>
+                                <span class="author">👤 <?php the_author(); ?></span>
                             </div>
-
-                            <?php if (has_excerpt()) : ?>
-                                <div class="video-card-excerpt">
-                                    <?php echo wp_trim_words(get_the_excerpt(), 20, '...'); ?>
+                            
+                            <div class="video-excerpt">
+                                <?php echo wp_trim_words(get_the_excerpt(), 15); ?>
+                            </div>
+                            
+                            <?php if (has_category()) : ?>
+                                <div class="video-categories">
+                                    <?php the_category(' '); ?>
                                 </div>
                             <?php endif; ?>
-                            
-                            <div class="video-card-actions">
-                                <a href="<?php the_permalink(); ?>" class="watch-btn">
-                                    <?php esc_html_e('Ver Video', 'videoplayer'); ?>
-                                </a>
-                                
-                                <button class="quick-share-btn" data-url="<?php the_permalink(); ?>" data-title="<?php the_title_attribute(); ?>">
-                                    📤
-                                </button>
-                            </div>
                         </div>
                     </article>
-
+                    
                 <?php endwhile; ?>
             </div>
-        </div>
 
-        <!-- Load More Button -->
-        <?php if (get_next_posts_link()) : ?>
-            <div class="load-more-container">
-                <button id="load-more-btn" class="load-more-btn" data-page="1" data-max="<?php echo $wp_query->max_num_pages; ?>">
-                    <span class="btn-text"><?php esc_html_e('Cargar Más Videos', 'videoplayer'); ?></span>
-                    <span class="btn-loading" style="display: none;">⟳ <?php esc_html_e('Cargando...', 'videoplayer'); ?></span>
-                </button>
-            </div>
-        <?php endif; ?>
+            <!-- Load More Button -->
+            <?php if (get_next_posts_link()) : ?>
+                <div class="load-more-container">
+                    <button id="load-more-videos" class="load-more-btn" 
+                            data-page="2" 
+                            data-max-pages="<?php echo $wp_query->max_num_pages; ?>">
+                        <span class="text"><?php esc_html_e('Cargar más videos', 'videoplayer'); ?></span>
+                        <span class="loading hidden">⏳ <?php esc_html_e('Cargando...', 'videoplayer'); ?></span>
+                    </button>
+                </div>
+            <?php endif; ?>
 
-        <!-- Traditional Pagination (fallback) -->
-        <nav class="pagination-nav" role="navigation" aria-label="<?php esc_attr_e('Navegación de videos', 'videoplayer'); ?>">
-            <?php
-            the_posts_pagination(array(
-                'mid_size' => 2,
-                'prev_text' => '‹ ' . esc_html__('Anterior', 'videoplayer'),
-                'next_text' => esc_html__('Siguiente', 'videoplayer') . ' ›',
-            ));
-            ?>
-        </nav>
+            <!-- Pagination -->
+            <nav class="navigation pagination" role="navigation" aria-label="<?php esc_attr_e('Navegación de videos', 'videoplayer'); ?>">
+                <?php
+                echo paginate_links(array(
+                    'prev_text' => '← ' . __('Anterior', 'videoplayer'),
+                    'next_text' => __('Siguiente', 'videoplayer') . ' →',
+                    'before_page_number' => '<span class="meta-nav screen-reader-text">' . __('Página', 'videoplayer') . ' </span>',
+                ));
+                ?>
+            </nav>
 
-    <?php else : ?>
-        
-        <!-- No videos found -->
-        <div class="no-videos">
-            <div class="no-videos-icon">📹</div>
-            <h2><?php esc_html_e('No se encontraron videos', 'videoplayer'); ?></h2>
-            <p><?php esc_html_e('No hay videos que coincidan con tus criterios de búsqueda.', 'videoplayer'); ?></p>
+        <?php else : ?>
             
-            <div class="no-videos-actions">
-                <a href="<?php echo esc_url(get_post_type_archive_link('video')); ?>" class="btn-primary">
-                    <?php esc_html_e('Ver Todos los Videos', 'videoplayer'); ?>
-                </a>
+            <div class="no-videos-found">
+                <div class="no-videos-icon">📹</div>
+                <h2><?php esc_html_e('No se encontraron videos', 'videoplayer'); ?></h2>
+                <p><?php esc_html_e('No hay videos que coincidan con tu búsqueda. Intenta con otros términos o explora nuestras categorías.', 'videoplayer'); ?></p>
                 
-                <?php get_search_form(); ?>
+                <div class="no-videos-actions">
+                    <a href="<?php echo esc_url(get_post_type_archive_link('video')); ?>" class="btn btn-primary">
+                        <?php esc_html_e('Ver todos los videos', 'videoplayer'); ?>
+                    </a>
+                    
+                    <?php if (is_search()) : ?>
+                        <a href="<?php echo esc_url(home_url('/')); ?>" class="btn btn-secondary">
+                            <?php esc_html_e('Ir al inicio', 'videoplayer'); ?>
+                        </a>
+                    <?php endif; ?>
+                </div>
             </div>
-        </div>
-
-    <?php endif; ?>
+            
+        <?php endif; ?>
+    </main>
 </div>
 
-<!-- Popular Videos Sidebar -->
-<?php
-$popular_videos = new WP_Query(array(
-    'post_type' => 'video',
-    'posts_per_page' => 5,
-    'meta_key' => '_view_count',
-    'orderby' => 'meta_value_num',
-    'order' => 'DESC',
-    'post__not_in' => wp_list_pluck($GLOBALS['wp_query']->posts, 'ID')
-));
-?>
-
-<?php if ($popular_videos->have_posts()) : ?>
-    <aside class="popular-sidebar">
-        <h3 class="sidebar-title"><?php esc_html_e('Videos Populares', 'videoplayer'); ?></h3>
-        
-        <div class="popular-videos-list">
-            <?php while ($popular_videos->have_posts()) : $popular_videos->the_post(); ?>
-                <div class="popular-video-item">
-                    <div class="popular-thumbnail">
-                        <a href="<?php the_permalink(); ?>">
-                            <?php if (has_post_thumbnail()) : ?>
-                                <?php the_post_thumbnail('thumbnail'); ?>
-                            <?php else : ?>
-                                <div class="thumbnail-placeholder-small">▶</div>
-                            <?php endif; ?>
-                        </a>
-                    </div>
-                    
-                    <div class="popular-info">
-                        <h4 class="popular-title">
-                            <a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
-                        </h4>
-                        <div class="popular-meta">
-                            <?php echo number_format(get_video_views()); ?> vistas
-                        </div>
-                    </div>
-                </div>
-            <?php endwhile; ?>
-            <?php wp_reset_postdata(); ?>
-        </div>
+<!-- Sidebar -->
+<?php if (is_active_sidebar('video-archive-sidebar')) : ?>
+    <aside class="archive-sidebar">
+        <?php dynamic_sidebar('video-archive-sidebar'); ?>
     </aside>
 <?php endif; ?>
 
 <style>
 .container {
-    max-width: 1400px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 0 20px;
 }
@@ -241,6 +302,7 @@ $popular_videos = new WP_Query(array(
     text-align: center;
     margin-bottom: 40px;
     padding: 40px 0;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .archive-title {
@@ -253,6 +315,7 @@ $popular_videos = new WP_Query(array(
 }
 
 .archive-description {
+    font-size: 1.1rem;
     color: var(--muted-text);
     max-width: 600px;
     margin: 0 auto 20px;
@@ -264,10 +327,11 @@ $popular_videos = new WP_Query(array(
     font-size: 14px;
 }
 
-/* Filters */
-.video-filters {
+.video-controls {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
     gap: 20px;
     margin-bottom: 30px;
     padding: 20px;
@@ -276,80 +340,207 @@ $popular_videos = new WP_Query(array(
     border: 1px solid var(--border-color);
 }
 
+.view-controls {
+    display: flex;
+    gap: 5px;
+}
+
+.view-toggle {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
+    color: var(--muted-text);
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: var(--transition);
+    border-radius: 6px;
+}
+
+.view-toggle:hover,
+.view-toggle.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.filter-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+}
+
 .filter-group {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
-.filter-label {
+.filter-group label {
     font-size: 14px;
     color: var(--muted-text);
     white-space: nowrap;
 }
 
 .filter-select {
-    background: var(--hover-bg);
+    background: rgba(255, 255, 255, 0.1);
     border: 1px solid var(--border-color);
     color: var(--light-text);
     padding: 8px 12px;
     border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
+    min-width: 150px;
 }
 
-.filter-select:focus {
-    outline: none;
-    border-color: var(--primary-color);
-}
-
-.view-toggle {
+.video-search {
     display: flex;
-    background: var(--hover-bg);
-    border-radius: 6px;
+}
+
+.search-form {
+    display: flex;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
+    border-radius: 25px;
     overflow: hidden;
 }
 
-.view-btn {
+.search-field {
     background: none;
     border: none;
+    color: var(--light-text);
+    padding: 10px 15px;
+    min-width: 200px;
+    outline: none;
+}
+
+.search-field::placeholder {
     color: var(--muted-text);
-    padding: 8px 12px;
+}
+
+.search-submit {
+    background: var(--primary-color);
+    border: none;
+    color: white;
+    padding: 10px 15px;
     cursor: pointer;
     transition: var(--transition);
 }
 
-.view-btn.active,
-.view-btn:hover {
-    background: var(--primary-color);
-    color: white;
+.search-submit:hover {
+    background: var(--secondary-color);
 }
 
-.search-filter {
-    margin-left: auto;
+.featured-videos-section {
+    margin-bottom: 50px;
 }
 
-/* Video Grid Enhancements */
-.videos-container {
-    position: relative;
+.section-title {
+    font-size: 2rem;
+    margin-bottom: 30px;
+    text-align: center;
+    color: var(--primary-color);
 }
 
-.videos-grid.list-view .video-card {
-    display: flex;
+.featured-videos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 30px;
+}
+
+.featured-video-card {
     background: rgba(255, 255, 255, 0.05);
     border-radius: var(--border-radius);
-    margin-bottom: 20px;
+    overflow: hidden;
+    transition: var(--transition);
+    border: 1px solid var(--border-color);
+}
+
+.featured-video-card:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.featured-video-thumbnail {
+    position: relative;
+    height: 200px;
+    background: var(--darker-bg);
+}
+
+.featured-video-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.videos-container {
+    display: grid;
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+.videos-container[data-view="grid"] {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.videos-container[data-view="list"] {
+    grid-template-columns: 1fr;
+}
+
+.videos-container[data-view="list"] .video-card {
+    display: flex;
+    gap: 20px;
+}
+
+.videos-container[data-view="list"] .video-thumbnail {
+    flex: 0 0 200px;
+    height: 120px;
+}
+
+.videos-container[data-view="list"] .video-content {
+    flex: 1;
+}
+
+.video-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    transition: var(--transition);
+    border: 1px solid var(--border-color);
+}
+
+.video-card:hover {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.video-thumbnail {
+    position: relative;
+    height: 160px;
+    background: var(--darker-bg);
     overflow: hidden;
 }
 
-.videos-grid.list-view .video-thumbnail {
-    width: 300px;
-    flex-shrink: 0;
+.video-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
 }
 
-.videos-grid.list-view .video-card-content {
-    flex: 1;
-    padding: 20px;
+.video-card:hover .video-thumbnail img {
+    transform: scale(1.05);
+}
+
+.thumbnail-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(45deg, #333, #555);
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.video-icon {
+    font-size: 3rem;
 }
 
 .video-overlay {
@@ -366,114 +557,125 @@ $popular_videos = new WP_Query(array(
     transition: var(--transition);
 }
 
-.video-thumbnail:hover .video-overlay {
+.video-card:hover .video-overlay {
     opacity: 1;
 }
 
-.video-overlay .play-btn {
+.play-btn {
+    width: 60px;
+    height: 60px;
     background: rgba(255, 255, 255, 0.9);
-    border: none;
     border-radius: 50%;
-    width: 50px;
-    height: 50px;
     display: flex;
     align-items: center;
     justify-content: center;
+    transform: scale(0.8);
     transition: var(--transition);
 }
 
-.video-overlay .play-btn:hover {
-    transform: scale(1.1);
-    background: white;
+.video-card:hover .play-btn {
+    transform: scale(1);
+    background: var(--primary-color);
 }
 
-.video-overlay .play-icon {
+.play-icon {
     width: 0;
     height: 0;
-    border-left: 15px solid #333;
-    border-top: 9px solid transparent;
-    border-bottom: 9px solid transparent;
+    border-left: 15px solid var(--dark-bg);
+    border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent;
     margin-left: 3px;
 }
 
-.redirect-badge {
+.video-card:hover .play-icon {
+    border-left-color: white;
+}
+
+.video-duration {
     position: absolute;
-    top: 8px;
-    left: 8px;
-    background: var(--primary-color);
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.8);
     color: white;
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 12px;
+    font-weight: 600;
 }
 
-.meta-primary {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 8px;
+.video-badges {
+    position: absolute;
+    top: 10px;
+    left: 10px;
 }
 
-.meta-categories {
-    display: flex;
-    gap: 5px;
-    flex-wrap: wrap;
-}
-
-.meta-categories a {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--muted-text);
-    padding: 2px 8px;
+.featured-badge {
+    background: var(--primary-color);
+    color: white;
+    padding: 4px 8px;
     border-radius: 4px;
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.video-content {
+    padding: 20px;
+}
+
+.video-title {
+    font-size: 16px;
+    margin-bottom: 10px;
+    line-height: 1.3;
+}
+
+.video-title a {
+    color: var(--light-text);
     text-decoration: none;
     transition: var(--transition);
 }
 
-.meta-categories a:hover {
+.video-title a:hover {
+    color: var(--primary-color);
+}
+
+.video-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    font-size: 12px;
+    color: var(--muted-text);
+    margin-bottom: 10px;
+}
+
+.video-excerpt {
+    color: var(--muted-text);
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
+
+.video-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.video-categories a {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--muted-text);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.video-categories a:hover {
     background: var(--primary-color);
     color: white;
 }
 
-.video-card-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 15px;
-}
-
-.watch-btn {
-    background: var(--gradient-primary);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 6px;
-    text-decoration: none;
-    font-size: 13px;
-    font-weight: 500;
-    transition: var(--transition);
-}
-
-.watch-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-light);
-}
-
-.quick-share-btn {
-    background: none;
-    border: none;
-    color: var(--muted-text);
-    font-size: 16px;
-    padding: 8px;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.quick-share-btn:hover {
-    background: var(--hover-bg);
-    color: var(--primary-color);
-}
-
-/* Load More */
 .load-more-container {
     text-align: center;
     margin: 40px 0;
@@ -481,17 +683,17 @@ $popular_videos = new WP_Query(array(
 
 .load-more-btn {
     background: var(--gradient-primary);
-    color: white;
     border: none;
+    color: white;
     padding: 15px 30px;
     border-radius: 8px;
+    cursor: pointer;
     font-size: 16px;
     font-weight: 600;
-    cursor: pointer;
     transition: var(--transition);
 }
 
-.load-more-btn:hover:not(:disabled) {
+.load-more-btn:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-light);
 }
@@ -499,14 +701,49 @@ $popular_videos = new WP_Query(array(
 .load-more-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+    transform: none;
 }
 
-/* No Videos */
-.no-videos {
+.hidden {
+    display: none;
+}
+
+.navigation.pagination {
+    text-align: center;
+    margin: 40px 0;
+}
+
+.navigation .nav-links {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.navigation .page-numbers {
+    display: inline-block;
+    padding: 10px 15px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--light-text);
+    text-decoration: none;
+    border-radius: 6px;
+    transition: var(--transition);
+    border: 1px solid var(--border-color);
+}
+
+.navigation .page-numbers:hover,
+.navigation .page-numbers.current {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.no-videos-found {
     text-align: center;
     padding: 80px 20px;
-    max-width: 500px;
-    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
 }
 
 .no-videos-icon {
@@ -515,166 +752,84 @@ $popular_videos = new WP_Query(array(
     opacity: 0.6;
 }
 
-.no-videos h2 {
+.no-videos-found h2 {
+    font-size: 2rem;
     margin-bottom: 15px;
-    color: var(--muted-text);
+    color: var(--light-text);
 }
 
-.no-videos p {
+.no-videos-found p {
+    font-size: 1.1rem;
     color: var(--muted-text);
-    margin-bottom: 30px;
+    max-width: 500px;
+    margin: 0 auto 30px;
     line-height: 1.6;
 }
 
 .no-videos-actions {
     display: flex;
-    flex-direction: column;
-    gap: 20px;
-    align-items: center;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-block;
+    padding: 12px 25px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: var(--transition);
+    border: 1px solid transparent;
 }
 
 .btn-primary {
     background: var(--gradient-primary);
     color: white;
-    padding: 12px 24px;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 600;
-    transition: var(--transition);
 }
 
-.btn-primary:hover {
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--light-text);
+    border-color: var(--border-color);
+}
+
+.btn:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-light);
 }
 
-/* Popular Sidebar */
-.popular-sidebar {
-    display: none;
-    position: fixed;
-    right: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 280px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    padding: 20px;
-    backdrop-filter: blur(10px);
-    z-index: 50;
-    max-height: 80vh;
-    overflow-y: auto;
-}
-
-.sidebar-title {
-    color: var(--primary-color);
-    font-size: 18px;
-    margin-bottom: 20px;
-    text-align: center;
-}
-
-.popular-video-item {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 15px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.popular-video-item:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-}
-
-.popular-thumbnail {
-    width: 60px;
-    height: 45px;
-    flex-shrink: 0;
-    border-radius: 6px;
-    overflow: hidden;
-}
-
-.popular-thumbnail img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.thumbnail-placeholder-small {
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(45deg, #333, #555);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 12px;
-}
-
-.popular-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.popular-title {
-    font-size: 14px;
-    margin-bottom: 5px;
-}
-
-.popular-title a {
-    color: var(--light-text);
-    text-decoration: none;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    line-height: 1.3;
-}
-
-.popular-title a:hover {
-    color: var(--primary-color);
-}
-
-.popular-meta {
-    font-size: 12px;
-    color: var(--muted-text);
-}
-
-/* Responsive */
-@media (min-width: 768px) {
-    .video-filters {
-        justify-content: space-between;
-        align-items: center;
+@media (max-width: 768px) {
+    .video-controls {
+        flex-direction: column;
+        gap: 15px;
     }
     
-    .search-filter {
-        margin-left: 0;
-    }
-}
-
-@media (min-width: 1024px) {
-    .popular-sidebar {
-        display: block;
-    }
-}
-
-@media (max-width: 768px) {
-    .video-filters {
-        flex-direction: column;
-        align-items: stretch;
+    .filter-controls {
+        width: 100%;
+        justify-content: center;
     }
     
     .filter-group {
-        justify-content: space-between;
+        flex-direction: column;
+        gap: 5px;
     }
     
-    .videos-grid.list-view .video-card {
+    .videos-container[data-view="grid"] {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    }
+    
+    .videos-container[data-view="list"] .video-card {
         flex-direction: column;
     }
     
-    .videos-grid.list-view .video-thumbnail {
-        width: 100%;
-        height: 200px;
+    .videos-container[data-view="list"] .video-thumbnail {
+        flex: none;
+        height: 160px;
+    }
+    
+    .featured-videos-grid {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -683,141 +838,147 @@ $popular_videos = new WP_Query(array(
         font-size: 2rem;
     }
     
-    .video-card-actions {
-        flex-direction: column;
-        gap: 10px;
-        align-items: stretch;
+    .videos-container[data-view="grid"] {
+        grid-template-columns: 1fr;
+    }
+    
+    .search-field {
+        min-width: 150px;
     }
 }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Sort functionality
-    const sortSelect = document.getElementById('sort-select');
-    if (sortSelect) {
-        sortSelect.addEventListener('change', function() {
-            const currentUrl = new URL(window.location);
-            currentUrl.searchParams.set('orderby', this.value);
-            currentUrl.searchParams.delete('paged');
-            window.location.href = currentUrl.toString();
-        });
-    }
-    
+    initVideoArchive();
+});
+
+function initVideoArchive() {
     // View toggle functionality
-    const viewButtons = document.querySelectorAll('.view-btn');
-    const videosContainer = document.getElementById('videos-container');
+    const viewToggles = document.querySelectorAll('.view-toggle');
+    const videosContainer = document.getElementById('videos-grid');
     
-    viewButtons.forEach(btn => {
-        btn.addEventListener('click', function() {
-            viewButtons.forEach(b => b.classList.remove('active'));
+    viewToggles.forEach(toggle => {
+        toggle.addEventListener('click', function() {
+            const view = this.dataset.view;
+            
+            // Update active state
+            viewToggles.forEach(t => t.classList.remove('active'));
             this.classList.add('active');
             
-            const view = this.dataset.view;
-            if (view === 'list') {
-                videosContainer.classList.add('list-view');
-            } else {
-                videosContainer.classList.remove('list-view');
-            }
+            // Update container view
+            videosContainer.dataset.view = view;
             
             // Save preference
-            localStorage.setItem('videoView', view);
+            localStorage.setItem('videoArchiveView', view);
         });
     });
     
-    // Restore view preference
-    const savedView = localStorage.getItem('videoView');
-    if (savedView === 'list') {
-        document.querySelector('[data-view="list"]')?.click();
+    // Load saved view preference
+    const savedView = localStorage.getItem('videoArchiveView');
+    if (savedView) {
+        const targetToggle = document.querySelector(`[data-view="${savedView}"]`);
+        if (targetToggle) {
+            targetToggle.click();
+        }
     }
+    
+    // Filter functionality
+    const filterSelects = document.querySelectorAll('.filter-select');
+    filterSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            applyFilters();
+        });
+    });
     
     // Load more functionality
-    const loadMoreBtn = document.getElementById('load-more-btn');
+    const loadMoreBtn = document.getElementById('load-more-videos');
     if (loadMoreBtn) {
-        loadMoreBtn.addEventListener('click', function() {
-            const btn = this;
-            const currentPage = parseInt(btn.dataset.page);
-            const maxPages = parseInt(btn.dataset.max);
-            const nextPage = currentPage + 1;
-            
-            if (nextPage > maxPages) return;
-            
-            // Show loading state
-            btn.disabled = true;
-            btn.querySelector('.btn-text').style.display = 'none';
-            btn.querySelector('.btn-loading').style.display = 'inline';
-            
-            // Build AJAX URL
-            const currentUrl = new URL(window.location);
-            currentUrl.searchParams.set('paged', nextPage);
-            
-            fetch(currentUrl.toString())
-                .then(response => response.text())
-                .then(html => {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const newVideos = doc.querySelectorAll('.video-card');
-                    
-                    if (newVideos.length > 0) {
-                        newVideos.forEach((video, index) => {
-                            video.style.animationDelay = (index * 0.1) + 's';
-                            videosContainer.appendChild(video);
-                        });
-                        
-                        btn.dataset.page = nextPage;
-                        
-                        if (nextPage >= maxPages) {
-                            btn.style.display = 'none';
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading more videos:', error);
-                })
-                .finally(() => {
-                    // Hide loading state
-                    btn.disabled = false;
-                    btn.querySelector('.btn-text').style.display = 'inline';
-                    btn.querySelector('.btn-loading').style.display = 'none';
-                });
-        });
+        loadMoreBtn.addEventListener('click', loadMoreVideos);
+    }
+}
+
+function applyFilters() {
+    const category = document.getElementById('category-filter').value;
+    const sort = document.getElementById('sort-filter').value;
+    const duration = document.getElementById('duration-filter').value;
+    
+    // Build URL with filters
+    const url = new URL(window.location);
+    
+    if (category) url.searchParams.set('category', category);
+    else url.searchParams.delete('category');
+    
+    if (sort && sort !== 'date') url.searchParams.set('orderby', sort);
+    else url.searchParams.delete('orderby');
+    
+    if (duration) url.searchParams.set('duration', duration);
+    else url.searchParams.delete('duration');
+    
+    // Reload page with new filters
+    window.location.href = url.toString();
+}
+
+function loadMoreVideos() {
+    const btn = document.getElementById('load-more-videos');
+    const currentPage = parseInt(btn.dataset.page);
+    const maxPages = parseInt(btn.dataset.maxPages);
+    
+    if (currentPage >= maxPages) {
+        btn.style.display = 'none';
+        return;
     }
     
-    // Quick share functionality
-    const shareButtons = document.querySelectorAll('.quick-share-btn');
-    shareButtons.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const url = this.dataset.url;
-            const title = this.dataset.title;
-            
-            if (navigator.share) {
-                navigator.share({
-                    title: title,
-                    url: url
-                }).catch(console.error);
-            } else {
-                // Fallback: copy to clipboard
-                navigator.clipboard.writeText(url).then(() => {
-                    // Show temporary feedback
-                    const originalText = this.innerHTML;
-                    this.innerHTML = '✓';
-                    this.style.color = 'var(--primary-color)';
-                    
-                    setTimeout(() => {
-                        this.innerHTML = originalText;
-                        this.style.color = '';
-                    }, 1000);
-                });
-            }
-        });
-    });
+    // Show loading state
+    btn.querySelector('.text').classList.add('hidden');
+    btn.querySelector('.loading').classList.remove('hidden');
+    btn.disabled = true;
     
-    // Animation delays for video cards
-    const videoCards = document.querySelectorAll('.video-card');
-    videoCards.forEach((card, index) => {
-        card.style.animationDelay = (index * 0.05) + 's';
+    // AJAX request
+    const formData = new FormData();
+    formData.append('action', 'load_more_videos');
+    formData.append('page', currentPage);
+    formData.append('posts_per_page', 12);
+    formData.append('nonce', videoPlayerAjax.nonce);
+    
+    fetch(videoPlayerAjax.ajaxurl, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Append new videos
+            const videosContainer = document.getElementById('videos-grid');
+            videosContainer.insertAdjacentHTML('beforeend', data.data.html);
+            
+            // Update button state
+            btn.dataset.page = currentPage + 1;
+            
+            if (currentPage + 1 >= maxPages) {
+                btn.style.display = 'none';
+            }
+        } else {
+            console.error('Error loading more videos:', data.data);
+        }
+    })
+    .catch(error => {
+        console.error('AJAX error:', error);
+    })
+    .finally(() => {
+        // Reset button state
+        btn.querySelector('.text').classList.remove('hidden');
+        btn.querySelector('.loading').classList.add('hidden');
+        btn.disabled = false;
     });
-});
+}
+
+function handleVideoClick(event) {
+    // Use the global function from main.js
+    if (window.VideoPlayerTheme) {
+        window.VideoPlayerTheme.handleVideoClick(event);
+    }
+}
 </script>
 
 <?php get_footer(); ?>
