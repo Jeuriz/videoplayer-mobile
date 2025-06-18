@@ -1,6 +1,6 @@
 <?php
 /**
- * Theme Setup and Initial Configuration
+ * Theme Setup Functions for VideoPlayer Mobile Theme
  * 
  * @package VideoPlayerMobile
  */
@@ -11,550 +11,429 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Theme Setup Class
+ * Track video views on single video pages
  */
-class VideoPlayer_Theme_Setup {
-    
-    public function __construct() {
-        add_action('after_switch_theme', array($this, 'theme_activation'));
-        add_action('switch_theme', array($this, 'theme_deactivation'));
-        add_action('admin_init', array($this, 'check_requirements'));
-        add_action('admin_notices', array($this, 'admin_notices'));
-        add_action('wp_loaded', array($this, 'flush_rewrite_rules_maybe'));
+function videoplayer_track_video_view() {
+    if (is_singular('video')) {
+        $post_id = get_the_ID();
+        $user_ip = $_SERVER['REMOTE_ADDR'];
+        $view_key = 'video_view_' . $post_id . '_' . md5($user_ip);
+        
+        // Only count one view per IP per day
+        if (!get_transient($view_key)) {
+            update_video_views($post_id);
+            set_transient($view_key, true, DAY_IN_SECONDS);
+        }
+    }
+}
+add_action('wp_head', 'videoplayer_track_video_view');
+
+/**
+ * Custom excerpt length
+ */
+function videoplayer_excerpt_length($length) {
+    return 25;
+}
+add_filter('excerpt_length', 'videoplayer_excerpt_length');
+
+/**
+ * Custom excerpt more
+ */
+function videoplayer_excerpt_more($more) {
+    return '...';
+}
+add_filter('excerpt_more', 'videoplayer_excerpt_more');
+
+/**
+ * Add body classes
+ */
+function videoplayer_body_classes($classes) {
+    // Add mobile class
+    if (wp_is_mobile()) {
+        $classes[] = 'mobile-device';
     }
     
-    /**
-     * Theme activation tasks
-     */
-    public function theme_activation() {
-        // Set theme activation flag
-        set_transient('videoplayer_theme_activated', true, 30);
-        
-        // Create default content
-        $this->create_default_content();
-        
-        // Set default customizer options
-        $this->set_default_customizer_options();
-        
-        // Create necessary pages
-        $this->create_necessary_pages();
-        
-        // Setup menus
-        $this->setup_default_menus();
-        
-        // Setup widgets
-        $this->setup_default_widgets();
-        
-        // Flush rewrite rules
-        flush_rewrite_rules();
-        
-        // Log activation
-        error_log('VideoPlayer Mobile Theme: Activated successfully');
+    // Add video class on video pages
+    if (is_singular('video')) {
+        $classes[] = 'single-video-page';
     }
     
-    /**
-     * Theme deactivation tasks
-     */
-    public function theme_deactivation() {
-        // Clean up if needed
-        delete_transient('videoplayer_theme_activated');
-        
-        // Log deactivation
-        error_log('VideoPlayer Mobile Theme: Deactivated');
+    // Add search class
+    if (is_search()) {
+        $classes[] = 'search-results-page';
     }
     
-    /**
-     * Check system requirements
-     */
-    public function check_requirements() {
-        $requirements_met = true;
-        $errors = array();
-        
-        // Check PHP version
-        if (version_compare(PHP_VERSION, '7.4', '<')) {
-            $requirements_met = false;
-            $errors[] = sprintf(
-                __('PHP versión 7.4 o superior requerida. Versión actual: %s', 'videoplayer'),
-                PHP_VERSION
-            );
+    return $classes;
+}
+add_filter('body_class', 'videoplayer_body_classes');
+
+/**
+ * Modify main query for video archives
+ */
+function videoplayer_modify_main_query($query) {
+    if (!is_admin() && $query->is_main_query()) {
+        if (is_home()) {
+            $query->set('post_type', array('post', 'video'));
         }
         
-        // Check WordPress version
-        global $wp_version;
-        if (version_compare($wp_version, '5.0', '<')) {
-            $requirements_met = false;
-            $errors[] = sprintf(
-                __('WordPress versión 5.0 o superior requerida. Versión actual: %s', 'videoplayer'),
-                $wp_version
-            );
-        }
-        
-        // Check required extensions
-        $required_extensions = array('json', 'mbstring', 'curl');
-        foreach ($required_extensions as $extension) {
-            if (!extension_loaded($extension)) {
-                $requirements_met = false;
-                $errors[] = sprintf(
-                    __('Extensión PHP requerida: %s', 'videoplayer'),
-                    $extension
-                );
+        if (is_post_type_archive('video')) {
+            $posts_per_page = get_theme_mod('videos_per_page', 12);
+            $query->set('posts_per_page', $posts_per_page);
+            
+            // Handle sorting
+            if (isset($_GET['orderby'])) {
+                switch ($_GET['orderby']) {
+                    case 'popular':
+                        $query->set('meta_key', '_view_count');
+                        $query->set('orderby', 'meta_value_num');
+                        $query->set('order', 'DESC');
+                        break;
+                    case 'duration':
+                        $query->set('meta_key', '_video_duration');
+                        $query->set('orderby', 'meta_value');
+                        break;
+                    case 'title':
+                        $query->set('orderby', 'title');
+                        $query->set('order', 'ASC');
+                        break;
+                }
             }
         }
+    }
+}
+add_action('pre_get_posts', 'videoplayer_modify_main_query');
+
+/**
+ * Add manifest link
+ */
+function videoplayer_add_manifest() {
+    echo '<link rel="manifest" href="' . get_template_directory_uri() . '/manifest.json">';
+    echo '<meta name="theme-color" content="' . get_theme_mod('primary_color', '#ff6b6b') . '">';
+}
+add_action('wp_head', 'videoplayer_add_manifest');
+
+/**
+ * Contact form handler
+ */
+function videoplayer_handle_contact_form() {
+    if (isset($_POST['action']) && $_POST['action'] === 'submit_contact_form') {
+        if (!wp_verify_nonce($_POST['contact_nonce'], 'contact_form_nonce')) {
+            wp_die('Security check failed');
+        }
         
-        // Store results
-        if (!$requirements_met) {
-            set_transient('videoplayer_requirements_errors', $errors, DAY_IN_SECONDS);
+        $name = sanitize_text_field($_POST['contact_name']);
+        $email = sanitize_email($_POST['contact_email']);
+        $subject = sanitize_text_field($_POST['contact_subject']);
+        $message = sanitize_textarea_field($_POST['contact_message']);
+        
+        $to = get_option('admin_email');
+        $email_subject = 'Nuevo mensaje de contacto: ' . $subject;
+        $email_message = "Nombre: $name\n";
+        $email_message .= "Email: $email\n\n";
+        $email_message .= "Mensaje:\n$message";
+        
+        $headers = array('Content-Type: text/plain; charset=UTF-8');
+        
+        if (wp_mail($to, $email_subject, $email_message, $headers)) {
+            wp_redirect(add_query_arg('contact', 'success', wp_get_referer()));
         } else {
-            delete_transient('videoplayer_requirements_errors');
+            wp_redirect(add_query_arg('contact', 'error', wp_get_referer()));
         }
+        exit;
     }
-    
-    /**
-     * Display admin notices
-     */
-    public function admin_notices() {
-        // Welcome notice
-        if (get_transient('videoplayer_theme_activated')) {
-            ?>
-            <div class="notice notice-success is-dismissible">
-                <h3><?php esc_html_e('¡Bienvenido a VideoPlayer Mobile!', 'videoplayer'); ?></h3>
-                <p>
-                    <?php esc_html_e('El tema se ha activado correctamente. Para comenzar, visita el', 'videoplayer'); ?>
-                    <a href="<?php echo admin_url('customize.php'); ?>"><?php esc_html_e('Customizer', 'videoplayer'); ?></a>
-                    <?php esc_html_e('para configurar tu sitio.', 'videoplayer'); ?>
-                </p>
-                <p>
-                    <a href="<?php echo admin_url('post-new.php?post_type=video'); ?>" class="button button-primary">
-                        <?php esc_html_e('Crear tu primer video', 'videoplayer'); ?>
-                    </a>
-                    <a href="<?php echo admin_url('customize.php'); ?>" class="button">
-                        <?php esc_html_e('Personalizar tema', 'videoplayer'); ?>
-                    </a>
-                    <a href="#" class="button" onclick="this.parentElement.parentElement.parentElement.style.display='none'">
-                        <?php esc_html_e('Cerrar', 'videoplayer'); ?>
-                    </a>
-                </p>
-            </div>
-            <?php
-            delete_transient('videoplayer_theme_activated');
+}
+add_action('admin_post_submit_contact_form', 'videoplayer_handle_contact_form');
+add_action('admin_post_nopriv_submit_contact_form', 'videoplayer_handle_contact_form');
+
+/**
+ * Custom login styles
+ */
+function videoplayer_login_styles() {
+    ?>
+    <style type="text/css">
+        body.login {
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 100%);
         }
         
-        // Requirements errors
-        $errors = get_transient('videoplayer_requirements_errors');
-        if ($errors && is_array($errors)) {
-            ?>
-            <div class="notice notice-error">
-                <h3><?php esc_html_e('Requisitos del Sistema No Cumplidos', 'videoplayer'); ?></h3>
-                <p><?php esc_html_e('Por favor, corrige los siguientes problemas:', 'videoplayer'); ?></p>
-                <ul>
-                    <?php foreach ($errors as $error) : ?>
-                        <li><?php echo esc_html($error); ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-            <?php
+        .login h1 a {
+            background-image: none;
+            background-color: #ff6b6b;
+            color: white;
+            width: auto;
+            height: auto;
+            text-indent: 0;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 20px;
+            border-radius: 8px;
         }
         
-        // Setup reminder
-        if (current_user_can('manage_options') && !get_option('videoplayer_setup_completed')) {
-            ?>
-            <div class="notice notice-info">
-                <h3><?php esc_html_e('Completa la Configuración', 'videoplayer'); ?></h3>
-                <p>
-                    <?php esc_html_e('Para aprovechar al máximo tu tema, completa estos pasos:', 'videoplayer'); ?>
-                </p>
-                <ol>
-                    <li><a href="<?php echo admin_url('customize.php?autofocus[section]=videoplayer_video_settings'); ?>"><?php esc_html_e('Configurar opciones de video', 'videoplayer'); ?></a></li>
-                    <li><a href="<?php echo admin_url('customize.php?autofocus[section]=videoplayer_monetization'); ?>"><?php esc_html_e('Configurar monetización', 'videoplayer'); ?></a></li>
-                    <li><a href="<?php echo admin_url('nav-menus.php'); ?>"><?php esc_html_e('Crear menús de navegación', 'videoplayer'); ?></a></li>
-                    <li><a href="<?php echo admin_url('widgets.php'); ?>"><?php esc_html_e('Configurar widgets', 'videoplayer'); ?></a></li>
-                </ol>
-                <p>
-                    <a href="#" class="button button-primary" onclick="videoplayer_mark_setup_complete(this)">
-                        <?php esc_html_e('Marcar como completado', 'videoplayer'); ?>
-                    </a>
-                </p>
-            </div>
-            <script>
-                function videoplayer_mark_setup_complete(button) {
-                    fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: 'action=videoplayer_mark_setup_complete&nonce=<?php echo wp_create_nonce('videoplayer_setup'); ?>'
-                    }).then(() => {
-                        button.parentElement.parentElement.style.display = 'none';
-                    });
-                }
-            </script>
-            <?php
-        }
-    }
-    
-    /**
-     * Create default content
-     */
-    private function create_default_content() {
-        // Create sample video posts
-        $sample_videos = array(
-            array(
-                'title' => 'Video de Demostración 1',
-                'content' => 'Este es un video de demostración para mostrar las capacidades del tema VideoPlayer Mobile.',
-                'duration' => '5:30',
-                'view_count' => 1250
-            ),
-            array(
-                'title' => 'Tutorial de Configuración',
-                'content' => 'Aprende cómo configurar tu sitio web de videos de manera óptima.',
-                'duration' => '8:45',
-                'view_count' => 890
-            ),
-            array(
-                'title' => 'Características Móviles',
-                'content' => 'Descubre todas las características optimizadas para dispositivos móviles.',
-                'duration' => '3:20',
-                'view_count' => 2100
-            )
-        );
-        
-        foreach ($sample_videos as $video_data) {
-            // Check if video already exists
-            $existing = get_posts(array(
-                'post_type' => 'video',
-                'title' => $video_data['title'],
-                'post_status' => 'any'
-            ));
-            
-            if (empty($existing)) {
-                $post_id = wp_insert_post(array(
-                    'post_title' => $video_data['title'],
-                    'post_content' => $video_data['content'],
-                    'post_status' => 'publish',
-                    'post_type' => 'video',
-                    'post_author' => get_current_user_id()
-                ));
-                
-                if ($post_id) {
-                    update_post_meta($post_id, '_video_duration', $video_data['duration']);
-                    update_post_meta($post_id, '_view_count', $video_data['view_count']);
-                    update_post_meta($post_id, '_redirect_enabled', 1);
-                    
-                    // Set first video as featured
-                    if ($video_data['title'] === 'Video de Demostración 1') {
-                        update_post_meta($post_id, '_featured_video', 1);
-                    }
-                }
-            }
-        }
-    }
-    
-    /**
-     * Set default customizer options
-     */
-    private function set_default_customizer_options() {
-        $default_options = array(
-            'primary_color' => '#ff6b6b',
-            'secondary_color' => '#4ecdc4',
-            'show_search_in_header' => true,
-            'sticky_header' => true,
-            'autoplay_videos' => false,
-            'video_quality' => 'auto',
-            'show_video_duration' => true,
-            'videos_per_page' => 12,
-            'enable_redirects' => true,
-            'max_redirects' => 2,
-            'show_social_links' => true,
-            'enable_lazy_loading' => true,
-            'enable_caching' => true,
-            'body_font' => 'system',
-            'heading_font' => 'system',
-            'font_size' => 16
-        );
-        
-        foreach ($default_options as $option => $value) {
-            if (get_theme_mod($option) === false) {
-                set_theme_mod($option, $value);
-            }
-        }
-    }
-    
-    /**
-     * Create necessary pages
-     */
-    private function create_necessary_pages() {
-        $pages = array(
-            'privacy-policy' => array(
-                'title' => 'Política de Privacidad',
-                'content' => 'Esta página contiene la política de privacidad de nuestro sitio web.'
-            ),
-            'contact' => array(
-                'title' => 'Contacto',
-                'content' => 'Ponte en contacto con nosotros a través de este formulario.'
-            ),
-            'about' => array(
-                'title' => 'Acerca de',
-                'content' => 'Información acerca de nuestro sitio web y nuestro contenido de videos.'
-            )
-        );
-        
-        foreach ($pages as $slug => $page_data) {
-            $existing = get_page_by_path($slug);
-            
-            if (!$existing) {
-                wp_insert_post(array(
-                    'post_title' => $page_data['title'],
-                    'post_content' => $page_data['content'],
-                    'post_status' => 'publish',
-                    'post_type' => 'page',
-                    'post_name' => $slug,
-                    'post_author' => get_current_user_id()
-                ));
-            }
-        }
-    }
-    
-    /**
-     * Setup default menus
-     */
-    private function setup_default_menus() {
-        // Get menu locations
-        $locations = get_theme_mod('nav_menu_locations');
-        
-        // Create primary menu if it doesn't exist
-        if (empty($locations['primary'])) {
-            $menu_name = 'Menú Principal';
-            $menu_exists = wp_get_nav_menu_object($menu_name);
-            
-            if (!$menu_exists) {
-                $menu_id = wp_create_nav_menu($menu_name);
-                
-                if ($menu_id) {
-                    // Add menu items
-                    $menu_items = array(
-                        array(
-                            'title' => 'Inicio',
-                            'url' => home_url('/'),
-                            'menu-item-status' => 'publish'
-                        ),
-                        array(
-                            'title' => 'Videos',
-                            'url' => get_post_type_archive_link('video'),
-                            'menu-item-status' => 'publish'
-                        ),
-                        array(
-                            'title' => 'Contacto',
-                            'url' => home_url('/contact/'),
-                            'menu-item-status' => 'publish'
-                        )
-                    );
-                    
-                    foreach ($menu_items as $item) {
-                        wp_update_nav_menu_item($menu_id, 0, array(
-                            'menu-item-title' => $item['title'],
-                            'menu-item-url' => $item['url'],
-                            'menu-item-status' => 'publish'
-                        ));
-                    }
-                    
-                    // Set menu location
-                    $locations['primary'] = $menu_id;
-                    $locations['mobile'] = $menu_id; // Use same menu for mobile
-                    set_theme_mod('nav_menu_locations', $locations);
-                }
-            }
-        }
-    }
-    
-    /**
-     * Setup default widgets
-     */
-    private function setup_default_widgets() {
-        $default_widgets = array(
-            'sidebar-1' => array(
-                'videoplayer_popular_videos-2' => array(
-                    'title' => 'Videos Populares',
-                    'number' => 5,
-                    'show_views' => true,
-                    'show_date' => true
-                ),
-                'videoplayer_video_categories-2' => array(
-                    'title' => 'Categorías',
-                    'number' => 6,
-                    'show_count' => true,
-                    'orderby' => 'count'
-                ),
-                'videoplayer_live_stats-2' => array(
-                    'title' => 'Estadísticas',
-                    'show_videos' => true,
-                    'show_views' => true,
-                    'show_comments' => true,
-                    'show_users' => true
-                )
-            )
-        );
-        
-        // Only set widgets if sidebar is empty
-        $existing_widgets = get_option('sidebars_widgets', array());
-        
-        foreach ($default_widgets as $sidebar_id => $widgets) {
-            if (empty($existing_widgets[$sidebar_id])) {
-                foreach ($widgets as $widget_id => $widget_data) {
-                    $widget_options = get_option('widget_' . explode('-', $widget_id)[0], array());
-                    $widget_options[2] = $widget_data;
-                    update_option('widget_' . explode('-', $widget_id)[0], $widget_options);
-                    
-                    $existing_widgets[$sidebar_id][] = $widget_id;
-                }
-            }
+        .login form {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
-        update_option('sidebars_widgets', $existing_widgets);
-    }
-    
-    /**
-     * Flush rewrite rules if needed
-     */
-    public function flush_rewrite_rules_maybe() {
-        if (get_transient('videoplayer_flush_rewrite_rules')) {
-            flush_rewrite_rules();
-            delete_transient('videoplayer_flush_rewrite_rules');
+        .login label {
+            color: #ffffff;
+        }
+        
+        .login input[type="text"],
+        .login input[type="password"] {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+        }
+        
+        .wp-core-ui .button-primary {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: none;
+            text-shadow: none;
+            box-shadow: none;
+        }
+    </style>
+    <?php
+}
+add_action('login_enqueue_scripts', 'videoplayer_login_styles');
+
+/**
+ * Remove unnecessary scripts and styles
+ */
+function videoplayer_dequeue_scripts() {
+    if (!is_admin()) {
+        // Remove emoji scripts
+        remove_action('wp_head', 'print_emoji_detection_script', 7);
+        remove_action('wp_print_styles', 'print_emoji_styles');
+        
+        // Remove block library CSS if not using Gutenberg
+        if (!current_theme_supports('wp-block-styles')) {
+            wp_dequeue_style('wp-block-library');
+            wp_dequeue_style('wp-block-library-theme');
         }
     }
 }
-
-// Initialize theme setup
-new VideoPlayer_Theme_Setup();
+add_action('wp_enqueue_scripts', 'videoplayer_dequeue_scripts', 100);
 
 /**
- * AJAX handler for marking setup as complete
+ * Security enhancements
  */
-function videoplayer_ajax_mark_setup_complete() {
-    check_ajax_referer('videoplayer_setup', 'nonce');
+// Remove WordPress version
+remove_action('wp_head', 'wp_generator');
+
+// Remove RSD link
+remove_action('wp_head', 'rsd_link');
+
+// Remove wlwmanifest link
+remove_action('wp_head', 'wlwmanifest_link');
+
+// Disable XML-RPC
+add_filter('xmlrpc_enabled', '__return_false');
+
+/**
+ * Performance optimizations
+ */
+// Defer parsing of JavaScript
+function videoplayer_defer_scripts($tag, $handle, $src) {
+    $defer_scripts = array('videoplayer-main', 'videoplayer-video');
     
-    if (current_user_can('manage_options')) {
-        update_option('videoplayer_setup_completed', true);
-        wp_send_json_success();
+    if (in_array($handle, $defer_scripts)) {
+        return str_replace(' src', ' defer src', $tag);
+    }
+    
+    return $tag;
+}
+add_filter('script_loader_tag', 'videoplayer_defer_scripts', 10, 3);
+
+// Add preload hints
+function videoplayer_preload_hints() {
+    echo '<link rel="preload" href="' . get_template_directory_uri() . '/js/main.js" as="script">';
+    echo '<link rel="prefetch" href="' . get_template_directory_uri() . '/js/video-player.js">';
+}
+add_action('wp_head', 'videoplayer_preload_hints', 1);
+
+/**
+ * AJAX handler for load more videos
+ */
+function videoplayer_ajax_load_more_videos() {
+    check_ajax_referer('videoplayer_nonce', 'nonce');
+    
+    $page = intval($_POST['page']);
+    $posts_per_page = intval($_POST['posts_per_page']);
+    
+    $args = array(
+        'post_type' => 'video',
+        'posts_per_page' => $posts_per_page,
+        'paged' => $page,
+        'post_status' => 'publish'
+    );
+    
+    $videos = new WP_Query($args);
+    
+    if ($videos->have_posts()) {
+        ob_start();
+        while ($videos->have_posts()) {
+            $videos->the_post();
+            get_template_part('template-parts/video-card');
+        }
+        $html = ob_get_clean();
+        wp_reset_postdata();
+        
+        wp_send_json_success(array(
+            'html' => $html,
+            'found_posts' => $videos->found_posts,
+            'max_pages' => $videos->max_num_pages
+        ));
     } else {
-        wp_send_json_error();
+        wp_send_json_error('No more videos found');
     }
 }
-add_action('wp_ajax_videoplayer_mark_setup_complete', 'videoplayer_ajax_mark_setup_complete');
+add_action('wp_ajax_load_more_videos', 'videoplayer_ajax_load_more_videos');
+add_action('wp_ajax_nopriv_load_more_videos', 'videoplayer_ajax_load_more_videos');
 
 /**
- * Reset theme to defaults
+ * Calculate estimated reading time
  */
-function videoplayer_reset_theme() {
-    if (!current_user_can('manage_options')) {
-        return false;
-    }
+function videoplayer_estimated_reading_time($content) {
+    $word_count = str_word_count(strip_tags($content));
+    $reading_time = ceil($word_count / 200); // 200 words per minute
     
-    // Remove all theme mods
-    remove_theme_mods();
-    
-    // Reset widgets
-    update_option('sidebars_widgets', array());
-    
-    // Clear caches
-    wp_cache_flush();
-    
-    // Set flag to recreate default content
-    set_transient('videoplayer_theme_activated', true, 30);
-    
-    return true;
+    return max(1, $reading_time);
 }
 
 /**
- * Check if theme is properly configured
+ * Add theme support for various WordPress features
  */
-function videoplayer_is_configured() {
-    $required_settings = array(
-        'primary_color',
-        'secondary_color',
-        'videos_per_page'
+function videoplayer_after_setup_theme() {
+    // Add support for post formats
+    add_theme_support('post-formats', array(
+        'video',
+        'audio',
+        'gallery',
+        'quote',
+        'link'
+    ));
+}
+add_action('after_setup_theme', 'videoplayer_after_setup_theme');
+
+/**
+ * Enqueue admin styles
+ */
+function videoplayer_admin_styles() {
+    wp_enqueue_style(
+        'videoplayer-admin',
+        get_template_directory_uri() . '/admin-style.css',
+        array(),
+        VIDEOPLAYER_VERSION
     );
-    
-    foreach ($required_settings as $setting) {
-        if (get_theme_mod($setting) === false) {
-            return false;
-        }
-    }
-    
-    return true;
 }
+add_action('admin_enqueue_scripts', 'videoplayer_admin_styles');
 
 /**
- * Get theme configuration status
+ * Add custom image sizes info
  */
-function videoplayer_get_config_status() {
-    $status = array(
-        'theme_configured' => videoplayer_is_configured(),
-        'has_videos' => wp_count_posts('video')->publish > 0,
-        'has_menus' => !empty(get_nav_menu_locations()),
-        'has_widgets' => !empty(get_option('sidebars_widgets', array())['sidebar-1']),
-        'requirements_met' => !get_transient('videoplayer_requirements_errors')
+function videoplayer_custom_image_sizes($sizes) {
+    return array_merge($sizes, array(
+        'video-thumbnail' => __('Video Miniatura', 'videoplayer'),
+        'video-large' => __('Video Grande', 'videoplayer'),
+        'video-hero' => __('Video Hero', 'videoplayer'),
+    ));
+}
+add_filter('image_size_names_choose', 'videoplayer_custom_image_sizes');
+
+/**
+ * Custom admin footer text
+ */
+function videoplayer_admin_footer_text($footer_text) {
+    $screen = get_current_screen();
+    
+    if (strpos($screen->id, 'video') !== false || $screen->id === 'themes') {
+        $footer_text = sprintf(
+            __('¿Te gusta VideoPlayer Mobile? %1$sPor favor califícanos%2$s en WordPress.org', 'videoplayer'),
+            '<a href="https://wordpress.org/themes/videoplayer-mobile/" target="_blank">',
+            '</a>'
+        );
+    }
+    
+    return $footer_text;
+}
+add_filter('admin_footer_text', 'videoplayer_admin_footer_text');
+
+/**
+ * Add dashboard widget
+ */
+function videoplayer_dashboard_widget() {
+    wp_add_dashboard_widget(
+        'videoplayer_stats',
+        __('Estadísticas de Videos', 'videoplayer'),
+        'videoplayer_dashboard_widget_content'
     );
-    
-    $status['overall_complete'] = array_sum($status) === count($status);
-    
-    return $status;
 }
+add_action('wp_dashboard_setup', 'videoplayer_dashboard_widget');
 
-/**
- * Export theme configuration
- */
-function videoplayer_export_config() {
-    if (!current_user_can('manage_options')) {
-        return false;
+function videoplayer_dashboard_widget_content() {
+    $total_videos = wp_count_posts('video');
+    $total_views = 0;
+    
+    // Calculate total views
+    $videos = get_posts(array(
+        'post_type' => 'video',
+        'posts_per_page' => -1,
+        'meta_key' => '_view_count'
+    ));
+    
+    foreach ($videos as $video) {
+        $views = get_post_meta($video->ID, '_view_count', true);
+        $total_views += intval($views);
     }
     
-    $config = array(
-        'theme_mods' => get_theme_mods(),
-        'widgets' => get_option('sidebars_widgets'),
-        'menus' => get_nav_menu_locations(),
-        'options' => array(
-            'videoplayer_settings' => get_option('videoplayer_settings')
-        ),
-        'timestamp' => current_time('mysql'),
-        'version' => wp_get_theme()->get('Version')
-    );
+    ?>
+    <div class="videoplayer-dashboard-stats">
+        <div class="stat-item">
+            <span class="stat-number"><?php echo $total_videos->publish; ?></span>
+            <span class="stat-label"><?php esc_html_e('Videos Publicados', 'videoplayer'); ?></span>
+        </div>
+        
+        <div class="stat-item">
+            <span class="stat-number"><?php echo number_format($total_views); ?></span>
+            <span class="stat-label"><?php esc_html_e('Vistas Totales', 'videoplayer'); ?></span>
+        </div>
+        
+        <div class="stat-item">
+            <span class="stat-number"><?php echo $total_videos->draft; ?></span>
+            <span class="stat-label"><?php esc_html_e('Borradores', 'videoplayer'); ?></span>
+        </div>
+        
+        <p>
+            <a href="<?php echo admin_url('edit.php?post_type=video'); ?>" class="button button-primary">
+                <?php esc_html_e('Gestionar Videos', 'videoplayer'); ?>
+            </a>
+        </p>
+    </div>
     
-    return json_encode($config, JSON_PRETTY_PRINT);
+    <style>
+    .videoplayer-dashboard-stats {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .stat-item {
+        text-align: center;
+        flex: 1;
+        min-width: 80px;
+    }
+    
+    .stat-number {
+        display: block;
+        font-size: 24px;
+        font-weight: bold;
+        color: #0073aa;
+    }
+    
+    .stat-label {
+        font-size: 12px;
+        color: #666;
+    }
+    </style>
+    <?php
 }
-
-/**
- * Import theme configuration
- */
-function videoplayer_import_config($config_json) {
-    if (!current_user_can('manage_options')) {
-        return false;
-    }
-    
-    $config = json_decode($config_json, true);
-    
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        return new WP_Error('invalid_json', 'Invalid JSON configuration');
-    }
-    
-    // Import theme mods
-    if (isset($config['theme_mods'])) {
-        foreach ($config['theme_mods'] as $mod => $value) {
-            set_theme_mod($mod, $value);
-        }
-    }
-    
-    // Import widgets
-    if (isset($config['widgets'])) {
-        update_option('sidebars_widgets', $config['widgets']);
-    }
-    
-    // Import options
-    if (isset($config['options'])) {
-        foreach ($config['options'] as $option => $value) {
-            update_option($option, $value);
-        }
-    }
-    
-    return true;
-}
-?>

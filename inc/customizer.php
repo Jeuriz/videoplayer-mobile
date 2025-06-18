@@ -1,6 +1,6 @@
 <?php
 /**
- * Theme Customizer Configuration
+ * VideoPlayer Mobile Theme Customizer
  * 
  * @package VideoPlayerMobile
  */
@@ -11,591 +11,654 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Add customizer support
+ * Add postMessage support for site title and description for the Theme Customizer.
  */
 function videoplayer_customize_register($wp_customize) {
     
-    // Add custom colors
+    // Add postMessage support for default WordPress settings
+    $wp_customize->get_setting('blogname')->transport = 'postMessage';
+    $wp_customize->get_setting('blogdescription')->transport = 'postMessage';
+    $wp_customize->get_setting('header_textcolor')->transport = 'postMessage';
+
+    // Remove default color scheme control
+    $wp_customize->remove_control('header_textcolor');
+
+    /**
+     * Theme Colors Section
+     */
+    $wp_customize->add_section('videoplayer_colors', array(
+        'title' => __('Colores del Tema', 'videoplayer'),
+        'priority' => 30,
+        'description' => __('Personaliza los colores principales del tema.', 'videoplayer'),
+    ));
+
+    // Primary Color
     $wp_customize->add_setting('primary_color', array(
         'default' => '#ff6b6b',
         'sanitize_callback' => 'sanitize_hex_color',
-        'transport' => 'postMessage'
+        'transport' => 'postMessage',
     ));
-    
+
     $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'primary_color', array(
         'label' => __('Color Primario', 'videoplayer'),
-        'section' => 'colors',
-        'settings' => 'primary_color'
+        'description' => __('Color principal usado en botones, enlaces y elementos destacados.', 'videoplayer'),
+        'section' => 'videoplayer_colors',
+        'settings' => 'primary_color',
     )));
-    
+
+    // Secondary Color
     $wp_customize->add_setting('secondary_color', array(
         'default' => '#4ecdc4',
         'sanitize_callback' => 'sanitize_hex_color',
-        'transport' => 'postMessage'
+        'transport' => 'postMessage',
     ));
-    
+
     $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'secondary_color', array(
         'label' => __('Color Secundario', 'videoplayer'),
-        'section' => 'colors',
-        'settings' => 'secondary_color'
+        'description' => __('Color complementario usado en gradientes y efectos.', 'videoplayer'),
+        'section' => 'videoplayer_colors',
+        'settings' => 'secondary_color',
     )));
 
-    // Theme Options Section
-    $wp_customize->add_section('videoplayer_theme_options', array(
-        'title' => __('Opciones del Tema', 'videoplayer'),
-        'priority' => 30,
-        'description' => __('Personaliza la configuración general del tema.', 'videoplayer')
+    // Background Color
+    $wp_customize->add_setting('background_color', array(
+        'default' => '#0c0c0c',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport' => 'postMessage',
     ));
 
-    // Logo Settings
-    $wp_customize->add_setting('custom_logo_text', array(
-        'default' => get_bloginfo('name'),
-        'sanitize_callback' => 'sanitize_text_field',
-        'transport' => 'postMessage'
-    ));
-    
-    $wp_customize->add_control('custom_logo_text', array(
-        'label' => __('Texto del Logo', 'videoplayer'),
-        'section' => 'title_tagline',
-        'type' => 'text',
-        'priority' => 10
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'background_color', array(
+        'label' => __('Color de Fondo', 'videoplayer'),
+        'description' => __('Color de fondo principal del sitio.', 'videoplayer'),
+        'section' => 'videoplayer_colors',
+        'settings' => 'background_color',
+    )));
+
+    // Text Color
+    $wp_customize->add_setting('text_color', array(
+        'default' => '#ffffff',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport' => 'postMessage',
     ));
 
-    // Header Settings
-    $wp_customize->add_section('videoplayer_header', array(
-        'title' => __('Configuración del Header', 'videoplayer'),
-        'priority' => 35
-    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'text_color', array(
+        'label' => __('Color de Texto', 'videoplayer'),
+        'description' => __('Color principal del texto.', 'videoplayer'),
+        'section' => 'videoplayer_colors',
+        'settings' => 'text_color',
+    )));
 
-    $wp_customize->add_setting('show_search_in_header', array(
-        'default' => true,
-        'sanitize_callback' => 'videoplayer_sanitize_checkbox'
-    ));
-    
-    $wp_customize->add_control('show_search_in_header', array(
-        'label' => __('Mostrar búsqueda en el header', 'videoplayer'),
-        'section' => 'videoplayer_header',
-        'type' => 'checkbox'
-    ));
-
-    $wp_customize->add_setting('sticky_header', array(
-        'default' => true,
-        'sanitize_callback' => 'videoplayer_sanitize_checkbox'
-    ));
-    
-    $wp_customize->add_control('sticky_header', array(
-        'label' => __('Header fijo al hacer scroll', 'videoplayer'),
-        'section' => 'videoplayer_header',
-        'type' => 'checkbox'
-    ));
-
-    // Video Settings Section
+    /**
+     * Video Settings Section
+     */
     $wp_customize->add_section('videoplayer_video_settings', array(
         'title' => __('Configuración de Videos', 'videoplayer'),
         'priority' => 40,
-        'description' => __('Configuración específica para el reproductor de videos.', 'videoplayer')
+        'description' => __('Ajustes relacionados con la reproducción y visualización de videos.', 'videoplayer'),
     ));
 
-    $wp_customize->add_setting('autoplay_videos', array(
-        'default' => false,
-        'sanitize_callback' => 'videoplayer_sanitize_checkbox'
-    ));
-    
-    $wp_customize->add_control('autoplay_videos', array(
-        'label' => __('Reproducción automática', 'videoplayer'),
-        'description' => __('Los videos se reproducirán automáticamente (solo con sonido silenciado)', 'videoplayer'),
-        'section' => 'videoplayer_video_settings',
-        'type' => 'checkbox'
-    ));
-
-    $wp_customize->add_setting('video_quality', array(
-        'default' => 'auto',
-        'sanitize_callback' => 'videoplayer_sanitize_select'
-    ));
-    
-    $wp_customize->add_control('video_quality', array(
-        'label' => __('Calidad de video por defecto', 'videoplayer'),
-        'section' => 'videoplayer_video_settings',
-        'type' => 'select',
-        'choices' => array(
-            'auto' => __('Automática', 'videoplayer'),
-            '1080p' => __('1080p (Full HD)', 'videoplayer'),
-            '720p' => __('720p (HD)', 'videoplayer'),
-            '480p' => __('480p (SD)', 'videoplayer')
-        )
-    ));
-
-    $wp_customize->add_setting('show_video_duration', array(
-        'default' => true,
-        'sanitize_callback' => 'videoplayer_sanitize_checkbox'
-    ));
-    
-    $wp_customize->add_control('show_video_duration', array(
-        'label' => __('Mostrar duración en miniaturas', 'videoplayer'),
-        'section' => 'videoplayer_video_settings',
-        'type' => 'checkbox'
-    ));
-
+    // Videos per page
     $wp_customize->add_setting('videos_per_page', array(
         'default' => 12,
-        'sanitize_callback' => 'absint'
+        'sanitize_callback' => 'absint',
+        'transport' => 'refresh',
     ));
-    
+
     $wp_customize->add_control('videos_per_page', array(
-        'label' => __('Videos por página', 'videoplayer'),
+        'label' => __('Videos por Página', 'videoplayer'),
+        'description' => __('Número de videos a mostrar en las páginas de archivo.', 'videoplayer'),
         'section' => 'videoplayer_video_settings',
-        'type' => 'number',
-        'input_attrs' => array(
-            'min' => 6,
-            'max' => 24,
-            'step' => 3
-        )
-    ));
-
-    // Monetization Settings
-    $wp_customize->add_section('videoplayer_monetization', array(
-        'title' => __('Configuración de Monetización', 'videoplayer'),
-        'priority' => 45,
-        'description' => __('Configuración para la monetización y redirecciones.', 'videoplayer')
-    ));
-
-    $wp_customize->add_setting('enable_redirects', array(
-        'default' => true,
-        'sanitize_callback' => 'videoplayer_sanitize_checkbox'
-    ));
-    
-    $wp_customize->add_control('enable_redirects', array(
-        'label' => __('Habilitar sistema de redirecciones', 'videoplayer'),
-        'section' => 'videoplayer_monetization',
-        'type' => 'checkbox'
-    ));
-
-    $wp_customize->add_setting('redirect_url', array(
-        'default' => '',
-        'sanitize_callback' => 'esc_url_raw'
-    ));
-    
-    $wp_customize->add_control('redirect_url', array(
-        'label' => __('URL de redirección', 'videoplayer'),
-        'section' => 'videoplayer_monetization',
-        'type' => 'url'
-    ));
-
-    $wp_customize->add_setting('max_redirects', array(
-        'default' => 2,
-        'sanitize_callback' => 'absint'
-    ));
-    
-    $wp_customize->add_control('max_redirects', array(
-        'label' => __('Máximo de redirecciones por sesión', 'videoplayer'),
-        'section' => 'videoplayer_monetization',
         'type' => 'number',
         'input_attrs' => array(
             'min' => 1,
-            'max' => 10
-        )
+            'max' => 50,
+        ),
     ));
 
-    $wp_customize->add_setting('ads_script_url', array(
-        'default' => '',
-        'sanitize_callback' => 'esc_url_raw'
-    ));
-    
-    $wp_customize->add_control('ads_script_url', array(
-        'label' => __('URL del script de publicidad', 'videoplayer'),
-        'section' => 'videoplayer_monetization',
-        'type' => 'url'
+    // Autoplay videos
+    $wp_customize->add_setting('autoplay_videos', array(
+        'default' => false,
+        'sanitize_callback' => 'wp_validate_boolean',
+        'transport' => 'refresh',
     ));
 
-    // Social Media Section
-    $wp_customize->add_section('videoplayer_social_media', array(
-        'title' => __('Redes Sociales', 'videoplayer'),
+    $wp_customize->add_control('autoplay_videos', array(
+        'label' => __('Reproducción Automática', 'videoplayer'),
+        'description' => __('Reproducir videos automáticamente (silenciados).', 'videoplayer'),
+        'section' => 'videoplayer_video_settings',
+        'type' => 'checkbox',
+    ));
+
+    // Show video duration
+    $wp_customize->add_setting('show_video_duration', array(
+        'default' => true,
+        'sanitize_callback' => 'wp_validate_boolean',
+        'transport' => 'postMessage',
+    ));
+
+    $wp_customize->add_control('show_video_duration', array(
+        'label' => __('Mostrar Duración', 'videoplayer'),
+        'description' => __('Mostrar la duración del video en las miniaturas.', 'videoplayer'),
+        'section' => 'videoplayer_video_settings',
+        'type' => 'checkbox',
+    ));
+
+    // Show view count
+    $wp_customize->add_setting('show_view_count', array(
+        'default' => true,
+        'sanitize_callback' => 'wp_validate_boolean',
+        'transport' => 'postMessage',
+    ));
+
+    $wp_customize->add_control('show_view_count', array(
+        'label' => __('Mostrar Contador de Vistas', 'videoplayer'),
+        'description' => __('Mostrar el número de visualizaciones en los videos.', 'videoplayer'),
+        'section' => 'videoplayer_video_settings',
+        'type' => 'checkbox',
+    ));
+
+    // Enable lazy loading
+    $wp_customize->add_setting('enable_lazy_loading', array(
+        'default' => true,
+        'sanitize_callback' => 'wp_validate_boolean',
+        'transport' => 'refresh',
+    ));
+
+    $wp_customize->add_control('enable_lazy_loading', array(
+        'label' => __('Carga Perezosa', 'videoplayer'),
+        'description' => __('Cargar videos solo cuando sean visibles.', 'videoplayer'),
+        'section' => 'videoplayer_video_settings',
+        'type' => 'checkbox',
+    ));
+
+    /**
+     * Redirect Settings Section
+     */
+    $wp_customize->add_section('videoplayer_redirect_settings', array(
+        'title' => __('Sistema de Redirección', 'videoplayer'),
         'priority' => 50,
-        'description' => __('Enlaces a tus redes sociales.', 'videoplayer')
+        'description' => __('Configuración del sistema de redirección para dispositivos móviles.', 'videoplayer'),
+    ));
+
+    // Enable redirects
+    $wp_customize->add_setting('enable_redirects', array(
+        'default' => true,
+        'sanitize_callback' => 'wp_validate_boolean',
+        'transport' => 'refresh',
+    ));
+
+    $wp_customize->add_control('enable_redirects', array(
+        'label' => __('Habilitar Redirecciones', 'videoplayer'),
+        'description' => __('Activar el sistema de redirección automática.', 'videoplayer'),
+        'section' => 'videoplayer_redirect_settings',
+        'type' => 'checkbox',
+    ));
+
+    // Redirect URL
+    $wp_customize->add_setting('redirect_url', array(
+        'default' => '',
+        'sanitize_callback' => 'esc_url_raw',
+        'transport' => 'refresh',
+    ));
+
+    $wp_customize->add_control('redirect_url', array(
+        'label' => __('URL de Redirección', 'videoplayer'),
+        'description' => __('URL principal para las redirecciones.', 'videoplayer'),
+        'section' => 'videoplayer_redirect_settings',
+        'type' => 'url',
+    ));
+
+    // Max redirects per user
+    $wp_customize->add_setting('max_redirects', array(
+        'default' => 2,
+        'sanitize_callback' => 'absint',
+        'transport' => 'refresh',
+    ));
+
+    $wp_customize->add_control('max_redirects', array(
+        'label' => __('Máximo de Redirecciones', 'videoplayer'),
+        'description' => __('Número máximo de redirecciones por usuario por día.', 'videoplayer'),
+        'section' => 'videoplayer_redirect_settings',
+        'type' => 'number',
+        'input_attrs' => array(
+            'min' => 1,
+            'max' => 10,
+        ),
+    ));
+
+    // Redirect delay
+    $wp_customize->add_setting('redirect_delay', array(
+        'default' => 3,
+        'sanitize_callback' => 'absint',
+        'transport' => 'refresh',
+    ));
+
+    $wp_customize->add_control('redirect_delay', array(
+        'label' => __('Retraso de Redirección (segundos)', 'videoplayer'),
+        'description' => __('Tiempo de espera antes de la redirección.', 'videoplayer'),
+        'section' => 'videoplayer_redirect_settings',
+        'type' => 'number',
+        'input_attrs' => array(
+            'min' => 0,
+            'max' => 30,
+        ),
+    ));
+
+    /**
+     * Layout Settings Section
+     */
+    $wp_customize->add_section('videoplayer_layout', array(
+        'title' => __('Diseño y Layout', 'videoplayer'),
+        'priority' => 60,
+        'description' => __('Opciones de diseño y estructura del sitio.', 'videoplayer'),
+    ));
+
+    // Layout style
+    $wp_customize->add_setting('layout_style', array(
+        'default' => 'grid',
+        'sanitize_callback' => 'videoplayer_sanitize_layout_style',
+        'transport' => 'postMessage',
+    ));
+
+    $wp_customize->add_control('layout_style', array(
+        'label' => __('Estilo de Layout', 'videoplayer'),
+        'description' => __('Selecciona el estilo de visualización para los videos.', 'videoplayer'),
+        'section' => 'videoplayer_layout',
+        'type' => 'select',
+        'choices' => array(
+            'grid' => __('Cuadrícula', 'videoplayer'),
+            'list' => __('Lista', 'videoplayer'),
+            'masonry' => __('Mosaico', 'videoplayer'),
+        ),
+    ));
+
+    // Sidebar position
+    $wp_customize->add_setting('sidebar_position', array(
+        'default' => 'right',
+        'sanitize_callback' => 'videoplayer_sanitize_sidebar_position',
+        'transport' => 'refresh',
+    ));
+
+    $wp_customize->add_control('sidebar_position', array(
+        'label' => __('Posición del Sidebar', 'videoplayer'),
+        'description' => __('Ubicación del sidebar en páginas internas.', 'videoplayer'),
+        'section' => 'videoplayer_layout',
+        'type' => 'select',
+        'choices' => array(
+            'left' => __('Izquierda', 'videoplayer'),
+            'right' => __('Derecha', 'videoplayer'),
+            'none' => __('Sin Sidebar', 'videoplayer'),
+        ),
+    ));
+
+    // Container width
+    $wp_customize->add_setting('container_width', array(
+        'default' => 1200,
+        'sanitize_callback' => 'absint',
+        'transport' => 'postMessage',
+    ));
+
+    $wp_customize->add_control('container_width', array(
+        'label' => __('Ancho del Contenedor (px)', 'videoplayer'),
+        'description' => __('Ancho máximo del contenido principal.', 'videoplayer'),
+        'section' => 'videoplayer_layout',
+        'type' => 'number',
+        'input_attrs' => array(
+            'min' => 800,
+            'max' => 1800,
+            'step' => 50,
+        ),
+    ));
+
+    /**
+     * Header Settings Section
+     */
+    $wp_customize->add_section('videoplayer_header', array(
+        'title' => __('Configuración del Header', 'videoplayer'),
+        'priority' => 70,
+        'description' => __('Personaliza la cabecera del sitio.', 'videoplayer'),
+    ));
+
+    // Header style
+    $wp_customize->add_setting('header_style', array(
+        'default' => 'modern',
+        'sanitize_callback' => 'videoplayer_sanitize_header_style',
+        'transport' => 'refresh',
+    ));
+
+    $wp_customize->add_control('header_style', array(
+        'label' => __('Estilo del Header', 'videoplayer'),
+        'section' => 'videoplayer_header',
+        'type' => 'select',
+        'choices' => array(
+            'modern' => __('Moderno', 'videoplayer'),
+            'classic' => __('Clásico', 'videoplayer'),
+            'minimal' => __('Minimalista', 'videoplayer'),
+        ),
+    ));
+
+    // Show search in header
+    $wp_customize->add_setting('show_header_search', array(
+        'default' => true,
+        'sanitize_callback' => 'wp_validate_boolean',
+        'transport' => 'refresh',
+    ));
+
+    $wp_customize->add_control('show_header_search', array(
+        'label' => __('Mostrar Búsqueda en Header', 'videoplayer'),
+        'section' => 'videoplayer_header',
+        'type' => 'checkbox',
+    ));
+
+    // Sticky header
+    $wp_customize->add_setting('sticky_header', array(
+        'default' => true,
+        'sanitize_callback' => 'wp_validate_boolean',
+        'transport' => 'postMessage',
+    ));
+
+    $wp_customize->add_control('sticky_header', array(
+        'label' => __('Header Pegajoso', 'videoplayer'),
+        'description' => __('Mantener el header visible al hacer scroll.', 'videoplayer'),
+        'section' => 'videoplayer_header',
+        'type' => 'checkbox',
+    ));
+
+    /**
+     * Footer Settings Section
+     */
+    $wp_customize->add_section('videoplayer_footer', array(
+        'title' => __('Configuración del Footer', 'videoplayer'),
+        'priority' => 80,
+        'description' => __('Personaliza el pie de página del sitio.', 'videoplayer'),
+    ));
+
+    // Footer text
+    $wp_customize->add_setting('footer_text', array(
+        'default' => '© 2025 VideoPlayer Mobile. Todos los derechos reservados.',
+        'sanitize_callback' => 'wp_kses_post',
+        'transport' => 'postMessage',
+    ));
+
+    $wp_customize->add_control('footer_text', array(
+        'label' => __('Texto del Footer', 'videoplayer'),
+        'section' => 'videoplayer_footer',
+        'type' => 'textarea',
+    ));
+
+    // Show social links
+    $wp_customize->add_setting('show_social_links', array(
+        'default' => true,
+        'sanitize_callback' => 'wp_validate_boolean',
+        'transport' => 'postMessage',
+    ));
+
+    $wp_customize->add_control('show_social_links', array(
+        'label' => __('Mostrar Enlaces Sociales', 'videoplayer'),
+        'section' => 'videoplayer_footer',
+        'type' => 'checkbox',
+    ));
+
+    /**
+     * Social Media Section
+     */
+    $wp_customize->add_section('videoplayer_social', array(
+        'title' => __('Redes Sociales', 'videoplayer'),
+        'priority' => 90,
+        'description' => __('Enlaces a tus perfiles de redes sociales.', 'videoplayer'),
     ));
 
     $social_networks = array(
         'facebook' => 'Facebook',
         'twitter' => 'Twitter',
-        'youtube' => 'YouTube',
         'instagram' => 'Instagram',
+        'youtube' => 'YouTube',
         'tiktok' => 'TikTok',
-        'discord' => 'Discord'
+        'linkedin' => 'LinkedIn',
     );
 
     foreach ($social_networks as $network => $label) {
-        $wp_customize->add_setting($network . '_url', array(
+        $wp_customize->add_setting("social_{$network}", array(
             'default' => '',
-            'sanitize_callback' => 'esc_url_raw'
+            'sanitize_callback' => 'esc_url_raw',
+            'transport' => 'postMessage',
         ));
-        
-        $wp_customize->add_control($network . '_url', array(
+
+        $wp_customize->add_control("social_{$network}", array(
             'label' => $label . ' URL',
-            'section' => 'videoplayer_social_media',
-            'type' => 'url'
+            'section' => 'videoplayer_social',
+            'type' => 'url',
         ));
     }
 
-    $wp_customize->add_setting('show_social_links', array(
-        'default' => true,
-        'sanitize_callback' => 'videoplayer_sanitize_checkbox'
-    ));
-    
-    $wp_customize->add_control('show_social_links', array(
-        'label' => __('Mostrar enlaces sociales en el footer', 'videoplayer'),
-        'section' => 'videoplayer_social_media',
-        'type' => 'checkbox'
-    ));
-
-    // Performance Section
+    /**
+     * Performance Section
+     */
     $wp_customize->add_section('videoplayer_performance', array(
         'title' => __('Rendimiento', 'videoplayer'),
-        'priority' => 55,
-        'description' => __('Configuración para optimizar el rendimiento del sitio.', 'videoplayer')
+        'priority' => 100,
+        'description' => __('Opciones para optimizar el rendimiento del sitio.', 'videoplayer'),
     ));
 
-    $wp_customize->add_setting('enable_lazy_loading', array(
-        'default' => true,
-        'sanitize_callback' => 'videoplayer_sanitize_checkbox'
-    ));
-    
-    $wp_customize->add_control('enable_lazy_loading', array(
-        'label' => __('Carga diferida de imágenes', 'videoplayer'),
-        'section' => 'videoplayer_performance',
-        'type' => 'checkbox'
-    ));
-
-    $wp_customize->add_setting('minify_css', array(
-        'default' => false,
-        'sanitize_callback' => 'videoplayer_sanitize_checkbox'
-    ));
-    
-    $wp_customize->add_control('minify_css', array(
-        'label' => __('Minificar CSS', 'videoplayer'),
-        'section' => 'videoplayer_performance',
-        'type' => 'checkbox'
-    ));
-
+    // Enable caching
     $wp_customize->add_setting('enable_caching', array(
         'default' => true,
-        'sanitize_callback' => 'videoplayer_sanitize_checkbox'
+        'sanitize_callback' => 'wp_validate_boolean',
+        'transport' => 'refresh',
     ));
-    
+
     $wp_customize->add_control('enable_caching', array(
-        'label' => __('Habilitar caché del navegador', 'videoplayer'),
+        'label' => __('Habilitar Caché', 'videoplayer'),
+        'description' => __('Activar sistema de caché para mejorar velocidad.', 'videoplayer'),
         'section' => 'videoplayer_performance',
-        'type' => 'checkbox'
+        'type' => 'checkbox',
     ));
 
-    // Typography Section
-    $wp_customize->add_section('videoplayer_typography', array(
-        'title' => __('Tipografía', 'videoplayer'),
-        'priority' => 60
+    // Optimize images
+    $wp_customize->add_setting('optimize_images', array(
+        'default' => true,
+        'sanitize_callback' => 'wp_validate_boolean',
+        'transport' => 'refresh',
     ));
 
-    $wp_customize->add_setting('body_font', array(
-        'default' => 'system',
-        'sanitize_callback' => 'videoplayer_sanitize_select'
-    ));
-    
-    $wp_customize->add_control('body_font', array(
-        'label' => __('Fuente del cuerpo', 'videoplayer'),
-        'section' => 'videoplayer_typography',
-        'type' => 'select',
-        'choices' => array(
-            'system' => __('Fuente del sistema', 'videoplayer'),
-            'roboto' => 'Roboto',
-            'open-sans' => 'Open Sans',
-            'lato' => 'Lato',
-            'montserrat' => 'Montserrat'
-        )
+    $wp_customize->add_control('optimize_images', array(
+        'label' => __('Optimizar Imágenes', 'videoplayer'),
+        'description' => __('Comprimir y optimizar imágenes automáticamente.', 'videoplayer'),
+        'section' => 'videoplayer_performance',
+        'type' => 'checkbox',
     ));
 
-    $wp_customize->add_setting('heading_font', array(
-        'default' => 'system',
-        'sanitize_callback' => 'videoplayer_sanitize_select'
-    ));
-    
-    $wp_customize->add_control('heading_font', array(
-        'label' => __('Fuente de los títulos', 'videoplayer'),
-        'section' => 'videoplayer_typography',
-        'type' => 'select',
-        'choices' => array(
-            'system' => __('Fuente del sistema', 'videoplayer'),
-            'roboto' => 'Roboto',
-            'open-sans' => 'Open Sans',
-            'lato' => 'Lato',
-            'montserrat' => 'Montserrat',
-            'poppins' => 'Poppins'
-        )
-    ));
-
-    $wp_customize->add_setting('font_size', array(
-        'default' => '16',
-        'sanitize_callback' => 'absint'
-    ));
-    
-    $wp_customize->add_control('font_size', array(
-        'label' => __('Tamaño de fuente base (px)', 'videoplayer'),
-        'section' => 'videoplayer_typography',
-        'type' => 'number',
-        'input_attrs' => array(
-            'min' => 14,
-            'max' => 20
-        )
-    ));
-
-    // Advanced Section
-    $wp_customize->add_section('videoplayer_advanced', array(
-        'title' => __('Configuración Avanzada', 'videoplayer'),
-        'priority' => 70,
-        'description' => __('Opciones avanzadas para usuarios experimentados.', 'videoplayer')
-    ));
-
-    $wp_customize->add_setting('custom_css', array(
-        'default' => '',
-        'sanitize_callback' => 'videoplayer_sanitize_css'
-    ));
-    
-    $wp_customize->add_control('custom_css', array(
-        'label' => __('CSS Personalizado', 'videoplayer'),
-        'section' => 'videoplayer_advanced',
-        'type' => 'textarea',
-        'input_attrs' => array(
-            'rows' => 10,
-            'placeholder' => '/* Escribe tu CSS personalizado aquí */'
-        )
-    ));
-
-    $wp_customize->add_setting('custom_js', array(
-        'default' => '',
-        'sanitize_callback' => 'videoplayer_sanitize_js'
-    ));
-    
-    $wp_customize->add_control('custom_js', array(
-        'label' => __('JavaScript Personalizado', 'videoplayer'),
-        'section' => 'videoplayer_advanced',
-        'type' => 'textarea',
-        'input_attrs' => array(
-            'rows' => 10,
-            'placeholder' => '// Escribe tu JavaScript personalizado aquí'
-        )
-    ));
-
-    $wp_customize->add_setting('enable_debug_mode', array(
+    // Minify CSS/JS
+    $wp_customize->add_setting('minify_assets', array(
         'default' => false,
-        'sanitize_callback' => 'videoplayer_sanitize_checkbox'
-    ));
-    
-    $wp_customize->add_control('enable_debug_mode', array(
-        'label' => __('Modo debug', 'videoplayer'),
-        'description' => __('Habilita información de depuración en la consola', 'videoplayer'),
-        'section' => 'videoplayer_advanced',
-        'type' => 'checkbox'
+        'sanitize_callback' => 'wp_validate_boolean',
+        'transport' => 'refresh',
     ));
 
-    // Add selective refresh support
-    if (isset($wp_customize->selective_refresh)) {
-        $wp_customize->selective_refresh->add_partial('custom_logo_text', array(
-            'selector' => '.site-logo',
-            'render_callback' => 'videoplayer_customize_partial_logo'
-        ));
-        
-        $wp_customize->selective_refresh->add_partial('blogdescription', array(
-            'selector' => '.site-description',
-            'render_callback' => 'videoplayer_customize_partial_description'
-        ));
-    }
+    $wp_customize->add_control('minify_assets', array(
+        'label' => __('Minificar CSS/JS', 'videoplayer'),
+        'description' => __('Comprimir archivos CSS y JavaScript.', 'videoplayer'),
+        'section' => 'videoplayer_performance',
+        'type' => 'checkbox',
+    ));
 }
 add_action('customize_register', 'videoplayer_customize_register');
 
 /**
  * Sanitization functions
  */
-function videoplayer_sanitize_checkbox($checked) {
-    return ((isset($checked) && true == $checked) ? true : false);
+function videoplayer_sanitize_layout_style($input) {
+    $valid = array('grid', 'list', 'masonry');
+    return in_array($input, $valid) ? $input : 'grid';
 }
 
-function videoplayer_sanitize_select($input, $setting) {
-    $input = sanitize_key($input);
-    $choices = $setting->manager->get_control($setting->id)->choices;
-    return (array_key_exists($input, $choices) ? $input : $setting->default);
+function videoplayer_sanitize_sidebar_position($input) {
+    $valid = array('left', 'right', 'none');
+    return in_array($input, $valid) ? $input : 'right';
 }
 
-function videoplayer_sanitize_css($css) {
-    return wp_strip_all_tags($css);
-}
-
-function videoplayer_sanitize_js($js) {
-    return wp_strip_all_tags($js);
+function videoplayer_sanitize_header_style($input) {
+    $valid = array('modern', 'classic', 'minimal');
+    return in_array($input, $valid) ? $input : 'modern';
 }
 
 /**
- * Partial refresh functions
- */
-function videoplayer_customize_partial_logo() {
-    $logo_text = get_theme_mod('custom_logo_text', get_bloginfo('name'));
-    return esc_html($logo_text);
-}
-
-function videoplayer_customize_partial_description() {
-    return get_bloginfo('description');
-}
-
-/**
- * Enqueue customizer scripts
+ * Bind JS handlers to instantly live-preview changes.
  */
 function videoplayer_customize_preview_js() {
     wp_enqueue_script(
         'videoplayer-customizer',
         get_template_directory_uri() . '/js/customizer.js',
         array('customize-preview'),
-        '1.0.0',
+        VIDEOPLAYER_VERSION,
         true
     );
 }
 add_action('customize_preview_init', 'videoplayer_customize_preview_js');
 
 /**
- * Output custom CSS
+ * Generate dynamic CSS based on customizer settings
  */
 function videoplayer_customizer_css() {
     $primary_color = get_theme_mod('primary_color', '#ff6b6b');
     $secondary_color = get_theme_mod('secondary_color', '#4ecdc4');
-    $font_size = get_theme_mod('font_size', '16');
-    $custom_css = get_theme_mod('custom_css', '');
+    $background_color = get_theme_mod('background_color', '#0c0c0c');
+    $text_color = get_theme_mod('text_color', '#ffffff');
+    $container_width = get_theme_mod('container_width', 1200);
     
     $css = "
-        :root {
-            --primary-color: {$primary_color};
-            --secondary-color: {$secondary_color};
-            --gradient-primary: linear-gradient(45deg, {$primary_color}, {$secondary_color});
-        }
-        
-        html {
-            font-size: {$font_size}px;
-        }
+    :root {
+        --primary-color: {$primary_color};
+        --secondary-color: {$secondary_color};
+        --background-color: {$background_color};
+        --text-color: {$text_color};
+        --container-width: {$container_width}px;
+        --gradient-primary: linear-gradient(45deg, {$primary_color}, {$secondary_color});
+    }
+    
+    body {
+        background-color: {$background_color};
+        color: {$text_color};
+    }
+    
+    .container {
+        max-width: {$container_width}px;
+    }
+    
+    a {
+        color: {$primary_color};
+    }
+    
+    .btn-primary,
+    .button-primary {
+        background: var(--gradient-primary);
+        border-color: {$primary_color};
+    }
+    
+    .video-overlay .play-btn {
+        background: {$primary_color};
+    }
+    
+    .progress-fill {
+        background: var(--gradient-primary);
+    }
     ";
     
-    // Add font family CSS
-    $body_font = get_theme_mod('body_font', 'system');
-    $heading_font = get_theme_mod('heading_font', 'system');
-    
-    if ($body_font !== 'system') {
-        $css .= "body { font-family: '{$body_font}', sans-serif; }";
+    // Header styles
+    $header_style = get_theme_mod('header_style', 'modern');
+    if ($header_style === 'minimal') {
+        $css .= "
+        .site-header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(12, 12, 12, 0.95);
+        }
+        ";
     }
     
-    if ($heading_font !== 'system') {
-        $css .= "h1, h2, h3, h4, h5, h6 { font-family: '{$heading_font}', sans-serif; }";
-    }
-    
-    // Add custom CSS
-    if ($custom_css) {
-        $css .= $custom_css;
-    }
-    
-    if (!empty($css)) {
-        echo '<style type="text/css" id="videoplayer-customizer-css">' . $css . '</style>';
-    }
-}
-add_action('wp_head', 'videoplayer_customizer_css');
-
-/**
- * Output custom JavaScript
- */
-function videoplayer_customizer_js() {
-    $custom_js = get_theme_mod('custom_js', '');
-    $debug_mode = get_theme_mod('enable_debug_mode', false);
-    
-    if ($custom_js || $debug_mode) {
-        echo '<script type="text/javascript">';
-        
-        if ($debug_mode) {
-            echo 'window.videoPlayerDebug = true;';
+    // Sticky header
+    if (get_theme_mod('sticky_header', true)) {
+        $css .= "
+        .site-header.sticky {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
         }
         
-        if ($custom_js) {
-            echo $custom_js;
+        body.has-sticky-header {
+            padding-top: 80px;
         }
-        
-        echo '</script>';
+        ";
     }
+    
+    return $css;
 }
-add_action('wp_footer', 'videoplayer_customizer_js');
 
 /**
- * Enqueue Google Fonts
+ * Output customizer CSS
  */
-function videoplayer_google_fonts() {
-    $body_font = get_theme_mod('body_font', 'system');
-    $heading_font = get_theme_mod('heading_font', 'system');
-    
-    $fonts = array();
-    
-    if ($body_font !== 'system' && $body_font !== $heading_font) {
-        $fonts[] = $body_font . ':300,400,500,600,700';
-    }
-    
-    if ($heading_font !== 'system') {
-        $fonts[] = $heading_font . ':400,500,600,700,800';
-    }
-    
-    if (!empty($fonts)) {
-        $fonts_url = 'https://fonts.googleapis.com/css2?family=' . implode('&family=', $fonts) . '&display=swap';
-        wp_enqueue_style('videoplayer-google-fonts', $fonts_url, array(), null);
-    }
+function videoplayer_customizer_css_output() {
+    echo '<style type="text/css" id="videoplayer-customizer-css">';
+    echo videoplayer_customizer_css();
+    echo '</style>';
 }
-add_action('wp_enqueue_scripts', 'videoplayer_google_fonts');
+add_action('wp_head', 'videoplayer_customizer_css_output');
 
 /**
- * Add customizer controls styles
+ * Add customizer controls scripts
  */
-function videoplayer_customizer_controls_css() {
+function videoplayer_customizer_controls_scripts() {
+    wp_enqueue_script(
+        'videoplayer-customizer-controls',
+        get_template_directory_uri() . '/js/customizer-controls.js',
+        array('jquery', 'customize-controls'),
+        VIDEOPLAYER_VERSION,
+        true
+    );
+}
+add_action('customize_controls_enqueue_scripts', 'videoplayer_customizer_controls_scripts');
+
+/**
+ * Add custom CSS for customizer interface
+ */
+function videoplayer_customizer_controls_styles() {
     ?>
     <style>
-        .customize-control-description {
-            font-style: italic;
-            font-size: 12px;
-            margin-top: 5px;
-        }
-        
-        #customize-control-primary_color .wp-color-picker,
-        #customize-control-secondary_color .wp-color-picker {
-            border-radius: 4px;
-        }
-        
-        .customize-section-description {
-            background: #f7f7f7;
-            padding: 15px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            border-left: 4px solid #0073aa;
-        }
+    .customize-control-description {
+        font-style: italic;
+        color: #666;
+        margin-top: 5px;
+    }
+    
+    .customize-section-description {
+        margin-bottom: 15px;
+        padding: 10px;
+        background: #f9f9f9;
+        border-left: 4px solid #0073aa;
+    }
+    
+    .videoplayer-customizer-heading {
+        font-weight: 600;
+        color: #0073aa;
+        margin-bottom: 10px;
+    }
     </style>
     <?php
 }
-add_action('customize_controls_print_styles', 'videoplayer_customizer_controls_css');
+add_action('customize_controls_print_styles', 'videoplayer_customizer_controls_styles');
 
 /**
- * Register customizer panels for better organization
+ * Register customizer panels (for complex customization)
  */
-function videoplayer_customizer_panels($wp_customize) {
-    // Theme Options Panel
-    $wp_customize->add_panel('videoplayer_theme_panel', array(
-        'title' => __('VideoPlayer Tema', 'videoplayer'),
-        'description' => __('Configuración completa del tema VideoPlayer Mobile', 'videoplayer'),
-        'priority' => 20
+function videoplayer_customize_register_panels($wp_customize) {
+    // Advanced Theme Panel
+    $wp_customize->add_panel('videoplayer_advanced', array(
+        'title' => __('Configuración Avanzada', 'videoplayer'),
+        'description' => __('Opciones avanzadas de configuración del tema.', 'videoplayer'),
+        'priority' => 200,
+        'capability' => 'edit_theme_options',
     ));
-    
-    // Move sections to panel
-    $wp_customize->get_section('videoplayer_theme_options')->panel = 'videoplayer_theme_panel';
-    $wp_customize->get_section('videoplayer_header')->panel = 'videoplayer_theme_panel';
-    $wp_customize->get_section('videoplayer_video_settings')->panel = 'videoplayer_theme_panel';
-    $wp_customize->get_section('videoplayer_monetization')->panel = 'videoplayer_theme_panel';
-    $wp_customize->get_section('videoplayer_social_media')->panel = 'videoplayer_theme_panel';
-    $wp_customize->get_section('videoplayer_performance')->panel = 'videoplayer_theme_panel';
-    $wp_customize->get_section('videoplayer_typography')->panel = 'videoplayer_theme_panel';
-    $wp_customize->get_section('videoplayer_advanced')->panel = 'videoplayer_theme_panel';
 }
-add_action('customize_register', 'videoplayer_customizer_panels', 15);
-?>
+add_action('customize_register', 'videoplayer_customize_register_panels', 5);
